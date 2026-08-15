@@ -52,6 +52,7 @@
         .toast.success { background: linear-gradient(135deg, #10b981, #059669); }
         .toast.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
         .toast.info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .toast.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
         
         /* Animasi Loader */
         .loader { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #ffffff; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
@@ -883,10 +884,14 @@
             const printContainer = document.createElement('div');
             printContainer.style.position = 'absolute';
             printContainer.style.top = '0';
-            printContainer.style.left = '-9999px'; // Amankan di luar layar
+            printContainer.style.left = '0'; 
             printContainer.style.width = '800px';
             printContainer.style.minWidth = '800px'; 
+            // PERBAIKAN: Gunakan z-index negatif dan opacity 0 agar tetap "berada" di layar secara teknis 
+            // Namun tidak terlihat, sehingga sistem Mobile Safari/Chrome tetap mau merendernya (tidak error/blank).
             printContainer.style.zIndex = '-9999';
+            printContainer.style.opacity = '0'; 
+            printContainer.style.pointerEvents = 'none';
             
             printContainer.innerHTML = `
                 <div id="${exportId}" style="width: 800px; padding: 0; margin: 0; background: white; font-family: 'Outfit', sans-serif; color: #1e293b; box-sizing: border-box;">
@@ -903,7 +908,7 @@
 
             const el = document.getElementById(exportId);
 
-            // Beri jeda agar font atau chart di-*render* sempurna sebelum difoto
+            // Beri jeda sedikit lebih lama agar browser di HP selesai memuat font sebelum memfotonya
             setTimeout(() => {
                 html2canvas(el, { scale: 2, useCORS: true, windowWidth: 800, logging: false }).then(canvas => {
                     const imgData = canvas.toDataURL('image/png');
@@ -932,18 +937,42 @@
                     const y = margin;
                     
                     pdf.addImage(imgData, 'PNG', x, y, finalW, finalH);
-                    pdf.save(filename);
                     
-                    document.body.removeChild(printContainer);
+                    // PERBAIKAN METODE DOWNLOAD: Lebih tangguh menembus pemblokiran browser HP
+                    const blob = pdf.output('blob');
+                    const blobUrl = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.style.display = 'none';
+                    link.href = blobUrl;
+                    link.download = filename;
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // Deteksi Browser Dalam Aplikasi (WhatsApp/Line/dll) yang memblokir unduhan
+                    const ua = navigator.userAgent || navigator.vendor || window.opera;
+                    const isInAppBrowser = (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1) || (ua.indexOf("Instagram") > -1) || (ua.indexOf("WhatsApp") > -1) || (ua.indexOf("Line") > -1);
+                    
+                    if(isInAppBrowser) {
+                        showToast("Tips: Jika unduhan tidak muncul, buka web ini di Chrome/Safari.", "warning");
+                    } else {
+                        showToast("Laporan berhasil diunduh!", "success");
+                    }
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(blobUrl);
+                        if(document.body.contains(printContainer)) document.body.removeChild(printContainer);
+                    }, 300);
+                    
                     loader.classList.add('hidden');
-                    showToast("Laporan berhasil diunduh!", "success");
                 }).catch(err => {
                     console.error(err);
-                    document.body.removeChild(printContainer);
+                    if(document.body.contains(printContainer)) document.body.removeChild(printContainer);
                     loader.classList.add('hidden');
-                    showToast("Gagal menyusun PDF.", "error");
+                    showToast("Gagal menyusun PDF. Silakan coba di Chrome/Safari Desktop.", "error");
                 });
-            }, 600); 
+            }, 800); 
         }
 
         function unduhLaporanHarian() {
