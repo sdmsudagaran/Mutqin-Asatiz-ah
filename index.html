@@ -11,8 +11,10 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- html2canvas dengan konfigurasi memori ringan -->
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
+    <!-- Mesin Render Stabil Khusus Laporan Presisi (F4 Fit 1 Lembar) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -75,7 +77,7 @@
     <div id="global-loader" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-[9999] hidden flex-col justify-center items-center">
         <div class="loader loader-dark w-12 h-12 border-4 mb-4"></div>
         <h3 class="font-arabic font-bold text-xl text-emerald-700">Memproses Laporan...</h3>
-        <p class="text-slate-500 text-sm mt-2 text-center px-6">Menyelaraskan margin dan tabel laporan...<br>Mohon tunggu sebentar.</p>
+        <p class="text-slate-500 text-sm mt-2 text-center px-6">Menyelaraskan margin presisi kertas F4...<br>Mohon tunggu sebentar.</p>
     </div>
 
     <header class="bg-gradient-to-r from-emerald-800 to-teal-700 text-white p-4 shadow-xl sticky top-0 z-40 relative overflow-hidden">
@@ -229,7 +231,7 @@
                                     <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
                                         <tr>
                                             <th class="p-3 font-bold text-center w-12">No</th>
-                                            <th class="p-3 font-bold">Nama Murid</th>
+                                            <th class="p-3 font-bold text-center">Nama Murid</th>
                                             <th class="p-3 font-bold text-center w-1/4">Ziyadah</th>
                                             <th class="p-3 font-bold text-center w-1/4">Murojaah</th>
                                         </tr>
@@ -265,7 +267,7 @@
                                     <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
                                         <tr>
                                             <th class="p-3 font-bold text-center w-12">No</th>
-                                            <th class="p-3 font-bold">Nama Murid</th>
+                                            <th class="p-3 font-bold text-center">Nama Murid</th>
                                             <th class="p-3 font-bold text-center">Ziyadah (Hari)</th>
                                             <th class="p-3 font-bold text-center">Murojaah (Hari)</th>
                                         </tr>
@@ -306,7 +308,7 @@
                                 <table class="w-full text-left text-sm whitespace-nowrap">
                                     <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
                                         <tr>
-                                            <th class="p-3 font-bold w-1/3">Hari, Tanggal</th>
+                                            <th class="p-3 font-bold text-center w-1/3">Hari, Tanggal</th>
                                             <th class="p-3 font-bold text-center w-1/3">Murojaah</th>
                                             <th class="p-3 font-bold text-center w-1/3">Ziyadah</th>
                                         </tr>
@@ -610,7 +612,7 @@
         }
 
         // --- FORMAT LENCANA (SMART BADGES) ---
-        function formatBadge(text, isMurojaah, scaleType) {
+        function formatBadge(text, isMurojaah, scaleType, align = 'center') {
             if(!text || text === '-' || text.toLowerCase().includes('diisi')) return `<span style="color:#cbd5e1;">-</span>`;
 
             let defaultBg = isMurojaah ? '#dbeafe' : '#d1fae5';
@@ -638,7 +640,7 @@
                 else if (lower === 'l' || lower.includes('- l -')) { bg = '#bbf7d0'; textCol = '#166534'; }
                 else if (lower === 'bl' || lower.includes('- bl -')) { bg = '#fecaca'; textCol = '#991b1b'; }
 
-                return `<span style="background-color: ${bg}; color: ${textCol}; padding: ${paddingMain}; border-radius: ${borderRadiusMain}; font-size: ${fontSizeText}; font-weight: 700; display: inline-block; line-height: 1;">${text}</span>`;
+                return `<span style="background-color: ${bg}; color: ${textCol}; padding: ${paddingMain}; border-radius: ${borderRadiusMain}; font-size: ${fontSizeText}; font-weight: 700; display: inline-block; line-height: 1; white-space: nowrap; text-align: ${align === 'flex-start' ? 'left' : 'center'};">${text}</span>`;
             }
 
             let formattedParts = parts.map(p => {
@@ -653,9 +655,9 @@
                 else if (lower === 'bl') { bg = '#fecaca'; textCol = '#991b1b'; isBadge = true; val = 'BL'; }
 
                 if (isBadge) return `<span style="background-color: ${bg}; color: ${textCol}; padding: ${paddingBadge}; border-radius: ${borderRadiusBadge}; font-size: ${fontSizeBadge}; font-weight: 800; margin-right: ${marginBadge}; display:inline-block; vertical-align: middle; line-height: 1; white-space: nowrap;">${val}</span>`;
-                else return `<span style="color: ${defaultCol}; font-weight: 700; font-size: ${fontSizeText}; vertical-align: middle; line-height: 1;">${val}</span>`;
+                else return `<span style="color: ${defaultCol}; font-weight: 700; font-size: ${fontSizeText}; vertical-align: middle; line-height: 1; white-space: nowrap;">${val}</span>`;
             });
-            return `<div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: ${marginBadge};">${formattedParts.join('')}</div>`;
+            return `<div style="display: flex; align-items: center; justify-content: ${align}; flex-wrap: wrap; gap: ${marginBadge};">${formattedParts.join('')}</div>`;
         }
 
         function getWeeklyBadgeWeb(count) {
@@ -666,10 +668,10 @@
         }
 
         function getWeeklyBadgeExport(count) {
-            if (count <= 1) return `<span style="color:#ef4444; font-weight:bold; font-size:11px;">${count} Hari</span>`;
-            if (count <= 3) return `<span style="color:#f97316; font-weight:bold; font-size:11px;">${count} Hari</span>`;
-            if (count <= 5) return `<span style="color:#3b82f6; font-weight:bold; font-size:11px;">${count} Hari</span>`;
-            return `<span style="color:#d97706; font-weight:bold; font-size:11px;"><svg style="vertical-align: text-bottom; margin-right: 2px;" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 20 20" fill="#f59e0b"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>${count} Hari</span>`;
+            if (count <= 1) return `<span style="color:#ef4444; font-weight:bold; font-size:12px;">${count} Hari</span>`;
+            if (count <= 3) return `<span style="color:#f97316; font-weight:bold; font-size:12px;">${count} Hari</span>`;
+            if (count <= 5) return `<span style="color:#3b82f6; font-weight:bold; font-size:12px;">${count} Hari</span>`;
+            return `<span style="color:#d97706; font-weight:bold; font-size:12px;"><svg style="vertical-align: text-bottom; margin-right: 2px;" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="#f59e0b"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>${count} Hari</span>`;
         }
 
         // --- DASHBOARD DATA ---
@@ -700,7 +702,6 @@
                 const res = await fetch(SCRIPT_URL + '?nocache=' + Date.now());
                 const data = await res.json();
                 
-                // Mencegah Error Parser: Handle Google Apps Script JSON Formats
                 let records = [];
                 if (Array.isArray(data)) records = data;
                 else if (data && Array.isArray(data.data)) records = data.data;
@@ -709,7 +710,6 @@
                 
                 window.recordsMap = {};
                 
-                // SISTEM SMART MERGE (Mencegah Ziyadah/Murojaah Tertimpa Saat Refresh Dasbor)
                 allRecords.forEach(r => {
                     const nama = r.nama || r.Nama || r.NAMA || '';
                     const kls = r.kelas || r.Kelas || r.KELAS || '';
@@ -726,7 +726,6 @@
                             if (!window.recordsMap[key]) {
                                 window.recordsMap[key] = { nama: String(nama).trim(), kelas: String(kls).trim(), tanggal: rawTgl, ziyadah: ziyadah, murojaah: murojaah };
                             } else {
-                                // Smart Merge! Jika di hari yang sama ada data lama, jangan hapus/timpa menjadi kosong
                                 if (ziyadah && String(ziyadah).trim() !== '' && String(ziyadah).trim() !== '-') window.recordsMap[key].ziyadah = ziyadah;
                                 if (murojaah && String(murojaah).trim() !== '' && String(murojaah).trim() !== '-') window.recordsMap[key].murojaah = murojaah;
                             }
@@ -768,7 +767,7 @@
                 tbodyHarian += `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="p-3 border-b border-slate-100 text-center text-slate-400 font-mono">${index + 1}</td>
-                        <td class="p-3 border-b border-slate-100 font-semibold text-slate-700 truncate max-w-[150px]">${siswa.nama}</td>
+                        <td class="p-3 border-b border-slate-100 font-semibold text-slate-700 truncate text-left max-w-[150px]">${siswa.nama}</td>
                         <td class="p-3 border-b border-slate-100 text-center">${valZ}</td>
                         <td class="p-3 border-b border-slate-100 text-center">${valM}</td>
                     </tr>`;
@@ -809,7 +808,7 @@
                 tbodyMingguanHtml += `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="p-3 border-b border-slate-100 text-center text-slate-400 font-mono">${index + 1}</td>
-                        <td class="p-3 border-b border-slate-100 font-semibold text-slate-700 truncate max-w-[150px]">${s.nama}</td>
+                        <td class="p-3 border-b border-slate-100 font-semibold text-slate-700 truncate text-left max-w-[150px]">${s.nama}</td>
                         <td class="p-3 border-b border-slate-100 text-center">${getWeeklyBadgeWeb(s.zCount)}</td>
                         <td class="p-3 border-b border-slate-100 text-center">${getWeeklyBadgeWeb(s.mCount)}</td>
                     </tr>`;
@@ -836,16 +835,16 @@
                 let valZ = '-', valM = '-';
                 if (record) {
                     const safeZ = (record.ziyadah) ? String(record.ziyadah).trim() : ""; const safeM = (record.murojaah) ? String(record.murojaah).trim() : "";
-                    if (safeZ !== "" && safeZ !== "-" && !safeZ.toLowerCase().includes('diisi')) valZ = formatBadge(safeZ, false, 'web');
-                    if (safeM !== "" && safeM !== "-" && !safeM.toLowerCase().includes('diisi')) valM = formatBadge(safeM, true, 'web');
+                    if (safeZ !== "" && safeZ !== "-" && !safeZ.toLowerCase().includes('diisi')) valZ = formatBadge(safeZ, false, 'web', 'flex-start');
+                    if (safeM !== "" && safeM !== "-" && !safeM.toLowerCase().includes('diisi')) valM = formatBadge(safeM, true, 'web', 'flex-start');
                 }
                 const formatTgl = formatTglLengkap(currentDate);
                 const isSunday = currentDate.getDay() === 0;
                 tbodyHtml += `
                     <tr class="hover:bg-slate-50 transition-colors ${isSunday ? 'bg-red-50/50' : ''}">
-                        <td class="p-3 border-b border-slate-100 font-medium text-slate-600 ${isSunday ? 'text-red-400' : ''}">${formatTgl}</td>
-                        <td class="p-3 border-b border-slate-100 text-center">${valM}</td>
-                        <td class="p-3 border-b border-slate-100 text-center">${valZ}</td>
+                        <td class="p-3 border-b border-slate-100 font-medium text-slate-600 text-left align-top ${isSunday ? 'text-red-400' : ''}">${formatTgl}</td>
+                        <td class="p-3 border-b border-slate-100 text-left align-top">${valM}</td>
+                        <td class="p-3 border-b border-slate-100 text-left align-top">${valZ}</td>
                     </tr>`;
             }
             document.getElementById('tbody-individu').innerHTML = tbodyHtml;
@@ -872,14 +871,84 @@
         }
 
         // --- SISTEM UNDUH PDF AESTHETIC (F4 Presisi 1 Lembar Tanpa Layar Bocor/Blank) ---
-        
+        // Fungsi Utama Mesin Render PDF Tunggal
+        function exportToF4PDF(htmlContent, filename, loaderMsg) {
+            const loader = document.getElementById('global-loader');
+            loader.querySelector('.font-arabic').textContent = loaderMsg;
+            loader.classList.remove('hidden');
+
+            const exportId = 'pdf-export-' + Date.now();
+            
+            // Konfigurasi Layar Virtual (Agar HP Merender Tabel Sebagai Desktop)
+            const printContainer = document.createElement('div');
+            printContainer.style.position = 'absolute';
+            printContainer.style.top = '0';
+            printContainer.style.left = '-9999px'; // Amankan di luar layar
+            printContainer.style.width = '800px';
+            printContainer.style.minWidth = '800px'; 
+            printContainer.style.zIndex = '-9999';
+            
+            printContainer.innerHTML = `
+                <div id="${exportId}" style="width: 800px; padding: 0; margin: 0; background: white; font-family: 'Outfit', sans-serif; color: #1e293b; box-sizing: border-box;">
+                    <style>
+                        /* Gaya Paksa agar CSS luar/tailwind tidak mengganggu tabel PDF */
+                        #${exportId} * { max-width: none !important; box-sizing: border-box; }
+                        #${exportId} table { width: 100% !important; border-collapse: collapse; }
+                        #${exportId} td, #${exportId} th { word-wrap: break-word; white-space: normal; }
+                    </style>
+                    ${htmlContent}
+                </div>
+            `;
+            document.body.appendChild(printContainer);
+
+            const el = document.getElementById(exportId);
+
+            // Beri jeda agar font atau chart di-*render* sempurna sebelum difoto
+            setTimeout(() => {
+                html2canvas(el, { scale: 2, useCORS: true, windowWidth: 800, logging: false }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', [210, 330]); // Ukuran F4
+                    
+                    const margin = 15; // Margin Kiri Kanan Atas Bawah = 1.5 cm (15mm)
+                    const maxW = 210 - (margin * 2); // 180 mm
+                    const maxH = 330 - (margin * 2); // 300 mm
+                    
+                    const imgW = canvas.width;
+                    const imgH = canvas.height;
+                    const ratio = imgW / imgH;
+                    
+                    let finalW = maxW;
+                    let finalH = maxW / ratio;
+                    
+                    // Skala Auto-Shrink (Menjamin pasti muat 1 lembar)
+                    if (finalH > maxH) {
+                        finalH = maxH;
+                        finalW = maxH * ratio;
+                    }
+                    
+                    // Pusatkan secara mendatar
+                    const x = margin + (maxW - finalW) / 2;
+                    const y = margin;
+                    
+                    pdf.addImage(imgData, 'PNG', x, y, finalW, finalH);
+                    pdf.save(filename);
+                    
+                    document.body.removeChild(printContainer);
+                    loader.classList.add('hidden');
+                    showToast("Laporan berhasil diunduh!", "success");
+                }).catch(err => {
+                    console.error(err);
+                    document.body.removeChild(printContainer);
+                    loader.classList.add('hidden');
+                    showToast("Gagal menyusun PDF.", "error");
+                });
+            }, 600); 
+        }
+
         function unduhLaporanHarian() {
             const kelas = document.getElementById('filter-kelas').value;
             if(!kelas) return showToast("Pilih kelas dulu!", "error");
-            
-            const loader = document.getElementById('global-loader');
-            loader.querySelector('.font-arabic').textContent = "Menyusun PDF Harian (F4)...";
-            loader.classList.remove('hidden');
 
             const today = new Date();
             const filteredSiswa = allSiswa.filter(s => String(s.kelas).trim() === String(kelas).trim());
@@ -901,158 +970,124 @@
                 tbodyHtml += `
                     <tr style="background: ${no % 2 === 0 ? '#f8fafc' : '#ffffff'};">
                         <td style="padding: 4px; border: 1px solid #a7f3d0; text-align: center; color: #475569;">${no++}</td>
-                        <td style="padding: 4px; border: 1px solid #a7f3d0; font-weight: bold; color: #334155;">${siswa.nama}</td>
+                        <td style="padding: 4px 8px; border: 1px solid #a7f3d0; font-weight: bold; color: #334155; text-align: left;">${siswa.nama}</td>
                         <td style="padding: 4px; border: 1px solid #a7f3d0; text-align: center;">${htmlZ}</td>
                         <td style="padding: 4px; border: 1px solid #a7f3d0; text-align: center;">${htmlM}</td>
                     </tr>`;
             });
 
-            const templateHTML = `
-                <div style="width: 800px; padding: 10px; font-family: 'Outfit', sans-serif; color: #1e293b; background: white; box-sizing: border-box; margin: 0 auto;">
-                    <div style="text-align: center; border-bottom: 2px solid #059669; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #064e3b; font-weight: 700; text-transform: uppercase;">Laporan Tahfiz Harian</h1>
-                        <p style="font-size: 14px; margin: 5px 0 0 0; color: #047857; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
-                    </div>
-                    
-                    <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
-                        <tr>
-                            <td style="vertical-align: top; width: 50%;">
-                                <table style="border-collapse: collapse;">
-                                    <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0;">Tanggal</td><td style="padding: 3px 0;">: ${formatTglLengkap(today)}</td></tr>
-                                </table>
-                            </td>
-                            <td style="vertical-align: top; width: 50%;">
-                                <table style="border-collapse: collapse; float: right;">
-                                    <tr><td style="padding: 3px 15px 3px 0;">Total Murid</td><td style="padding: 3px 0;">: ${cTot} Siswa</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #059669;">Ziyadah</td><td style="padding: 3px 0; color: #059669;">: ${cZ} Siswa</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #2563eb;">Murojaah</td><td style="padding: 3px 0; color: #2563eb;">: ${cM} Siswa</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #ef4444;">Belum Setor</td><td style="padding: 3px 0; color: #ef4444;">: ${cB} Siswa</td></tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif; text-align: center;">
-                        <thead style="background: #ecfdf5; color: #064e3b; font-family: 'El Messiri', serif;">
-                            <tr>
-                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 5%;">No</th>
-                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 35%; text-align: left;">Nama Murid</th>
-                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 30%;">Ziyadah</th>
-                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 30%;">Murojaah</th>
-                            </tr>
-                        </thead>
-                        <tbody>${tbodyHtml}</tbody>
-                    </table>
+            const htmlContent = `
+                <div style="text-align: center; border-bottom: 2px solid #059669; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #064e3b; font-weight: 700; text-transform: uppercase;">Laporan Tahfiz Harian</h1>
+                    <p style="font-size: 14px; margin: 5px 0 0 0; color: #047857; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
                 </div>
+                
+                <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
+                    <tr>
+                        <td style="vertical-align: top; width: 50%;">
+                            <table style="border-collapse: collapse;">
+                                <tr><td style="padding: 3px 15px 3px 0;">Ustaz/ah</td><td style="padding: 3px 0;">: ${currentUser.ustazah}</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0;">Tanggal</td><td style="padding: 3px 0;">: ${formatTglLengkap(today)}</td></tr>
+                            </table>
+                        </td>
+                        <td style="vertical-align: top; width: 50%;">
+                            <table style="border-collapse: collapse; float: right;">
+                                <tr><td style="padding: 3px 15px 3px 0;">Total Murid</td><td style="padding: 3px 0;">: ${cTot} Siswa</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0; color: #059669;">Ziyadah</td><td style="padding: 3px 0; color: #059669;">: ${cZ} Siswa</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0; color: #2563eb;">Murojaah</td><td style="padding: 3px 0; color: #2563eb;">: ${cM} Siswa</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0; color: #ef4444;">Belum Setor</td><td style="padding: 3px 0; color: #ef4444;">: ${cB} Siswa</td></tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'Outfit', sans-serif;">
+                    <thead style="background: #ecfdf5; color: #064e3b; font-family: 'El Messiri', serif;">
+                        <tr>
+                            <th style="padding: 8px; border: 1px solid #6ee7b7; width: 5%; text-align: center;">No</th>
+                            <th style="padding: 8px; border: 1px solid #6ee7b7; width: 35%; text-align: center;">Nama Murid</th>
+                            <th style="padding: 8px; border: 1px solid #6ee7b7; width: 30%; text-align: center;">Ziyadah</th>
+                            <th style="padding: 8px; border: 1px solid #6ee7b7; width: 30%; text-align: center;">Murojaah</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tbodyHtml}</tbody>
+                </table>
             `;
-
-            const exportDiv = document.createElement('div');
-            exportDiv.style.position = 'absolute';
-            exportDiv.style.left = '-9999px';
-            exportDiv.style.top = '0';
-            exportDiv.style.width = '800px'; 
-            exportDiv.innerHTML = templateHTML;
-            document.body.appendChild(exportDiv);
-
-            const opt = {
-                margin:       20, 
-                filename:     `Harian_${kelas.replace(/\s+/g,'_')}_${getYYYYMMDD(today)}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, windowWidth: 800 },
-                jsPDF:        { unit: 'mm', format: [210, 330], orientation: 'portrait' } 
-            };
-
-            html2pdf().set(opt).from(exportDiv).save().then(() => {
-                loader.classList.add('hidden');
-                document.body.removeChild(exportDiv);
-                showToast("Laporan PDF berhasil diunduh!", "success");
-            }).catch(err => {
-                loader.classList.add('hidden');
-                document.body.removeChild(exportDiv);
-                showToast("Gagal menyusun PDF.", "error");
-            });
+            
+            exportToF4PDF(htmlContent, `Harian_${kelas.replace(/\s+/g,'_')}_${getYYYYMMDD(today)}.pdf`, "Menyusun PDF Harian (F4)...");
         }
 
         function unduhLaporanMingguan() {
             const kelas = document.getElementById('filter-kelas').value;
             if(!kelas || dataMingguanSiswa.length === 0) return showToast("Pilih kelas atau data masih kosong!", "error");
-            
-            const loader = document.getElementById('global-loader');
-            loader.querySelector('.font-arabic').textContent = "Menyusun PDF Mingguan (F4)...";
-            loader.classList.remove('hidden');
 
             const chartImgUrl = document.getElementById('weeklyChart').toDataURL("image/png");
             const dAwal = globalDatesMingguan[0], dAkhir = globalDatesMingguan[5];
-            let tbodyMingguanHtml = '';
+            
+            let cTot = dataMingguanSiswa.length;
+            let cZ = 0, cM = 0, cB = 0;
+            dataMingguanSiswa.forEach(s => {
+                if (s.zCount > 0) cZ++;
+                if (s.mCount > 0) cM++;
+                if (s.zCount === 0 && s.mCount === 0) cB++;
+            });
 
+            let tbodyMingguanHtml = '';
             dataMingguanSiswa.forEach((s, i) => {
                 tbodyMingguanHtml += `
                     <tr style="background: ${i % 2 === 0 ? '#f8fafc' : '#ffffff'};">
                         <td style="padding: 4px; border: 1px solid #bfdbfe; text-align: center; color: #475569;">${i + 1}</td>
-                        <td style="padding: 4px; border: 1px solid #bfdbfe; font-weight: bold; color: #334155; text-align: left;">${s.nama}</td>
+                        <td style="padding: 4px 8px; border: 1px solid #bfdbfe; font-weight: bold; color: #334155; text-align: left;">${s.nama}</td>
                         <td style="padding: 4px; border: 1px solid #bfdbfe; text-align: center;">${getWeeklyBadgeExport(s.zCount)}</td>
                         <td style="padding: 4px; border: 1px solid #bfdbfe; text-align: center;">${getWeeklyBadgeExport(s.mCount)}</td>
                     </tr>`;
             });
 
-            const templateHTML = `
-                <div style="width: 800px; padding: 10px; font-family: 'Outfit', sans-serif; color: #1e293b; background: white; box-sizing: border-box; margin: 0 auto;">
-                    <div style="text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #1e3a8a; font-weight: 700; text-transform: uppercase;">Rekap Mingguan Tahfiz</h1>
-                        <p style="font-size: 14px; margin: 5px 0 0 0; color: #2563eb; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
-                    </div>
-                    
-                    <table style="width: 100%; margin-bottom: 15px; font-size: 13px; font-weight: 600;">
-                        <tr>
-                            <td style="vertical-align: top; width: 50%;">Kelas: ${kelas}</td>
-                            <td style="vertical-align: top; width: 50%; text-align: right;">Periode: ${dAwal.toLocaleDateString('id-ID',{day:'2-digit',month:'short'})} - ${dAkhir.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</td>
-                        </tr>
-                    </table>
-                    
-                    <div style="margin-bottom: 20px; text-align: center;">
-                        <img src="${chartImgUrl}" style="max-width: 100%; height: auto; max-height: 150px; object-fit: contain;" alt="Chart Mingguan">
-                    </div>
-
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif; text-align: center;">
-                        <thead style="background: #eff6ff; color: #1e3a8a; font-family: 'El Messiri', serif;">
-                            <tr>
-                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 5%;">No</th>
-                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 45%; text-align: left;">Nama Murid</th>
-                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 25%;">Ziyadah (Hari)</th>
-                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 25%;">Murojaah (Hari)</th>
-                            </tr>
-                        </thead>
-                        <tbody>${tbodyMingguanHtml}</tbody>
-                    </table>
+            const htmlContent = `
+                <div style="text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #1e3a8a; font-weight: 700; text-transform: uppercase;">Rekap Mingguan Tahfiz</h1>
+                    <p style="font-size: 14px; margin: 5px 0 0 0; color: #2563eb; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
                 </div>
+                
+                <table style="width: 100%; margin-bottom: 15px; font-size: 13px; font-weight: 600;">
+                    <tr>
+                        <td style="vertical-align: top; width: 50%;">
+                            <table style="border-collapse: collapse;">
+                                <tr><td style="padding: 3px 15px 3px 0;">Ustaz/ah</td><td style="padding: 3px 0;">: ${currentUser.ustazah}</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0;">Periode</td><td style="padding: 3px 0;">: ${dAwal.toLocaleDateString('id-ID',{day:'2-digit',month:'short'})} - ${dAkhir.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</td></tr>
+                            </table>
+                        </td>
+                        <td style="vertical-align: top; width: 50%;">
+                            <table style="border-collapse: collapse; float: right;">
+                                <tr><td style="padding: 3px 15px 3px 0;">Total Murid</td><td style="padding: 3px 0;">: ${cTot} Siswa</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0; color: #10b981;">Aktif Ziyadah</td><td style="padding: 3px 0; color: #10b981;">: ${cZ} Siswa</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0; color: #2563eb;">Aktif Murojaah</td><td style="padding: 3px 0; color: #2563eb;">: ${cM} Siswa</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0; color: #ef4444;">Belum Setor</td><td style="padding: 3px 0; color: #ef4444;">: ${cB} Siswa</td></tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <img src="${chartImgUrl}" style="max-width: 100%; height: auto; max-height: 180px; object-fit: contain; margin: 0 auto;" alt="Chart Mingguan">
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'Outfit', sans-serif;">
+                    <thead style="background: #eff6ff; color: #1e3a8a; font-family: 'El Messiri', serif;">
+                        <tr>
+                            <th style="padding: 8px; border: 1px solid #93c5fd; width: 5%; text-align: center;">No</th>
+                            <th style="padding: 8px; border: 1px solid #93c5fd; width: 45%; text-align: center;">Nama Murid</th>
+                            <th style="padding: 8px; border: 1px solid #93c5fd; width: 25%; text-align: center;">Ziyadah (Hari)</th>
+                            <th style="padding: 8px; border: 1px solid #93c5fd; width: 25%; text-align: center;">Murojaah (Hari)</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tbodyMingguanHtml}</tbody>
+                </table>
             `;
 
-            const exportDiv = document.createElement('div');
-            exportDiv.style.position = 'absolute';
-            exportDiv.style.left = '-9999px';
-            exportDiv.style.top = '0';
-            exportDiv.style.width = '800px'; 
-            exportDiv.innerHTML = templateHTML;
-            document.body.appendChild(exportDiv);
-
-            const opt = {
-                margin:       20,
-                filename:     `Mingguan_${kelas.replace(/\s+/g,'_')}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, windowWidth: 800 },
-                jsPDF:        { unit: 'mm', format: [210, 330], orientation: 'portrait' } 
-            };
-
-            html2pdf().set(opt).from(exportDiv).save().then(() => {
-                loader.classList.add('hidden');
-                document.body.removeChild(exportDiv);
-                showToast("Laporan PDF berhasil diunduh!", "success");
-            }).catch(err => {
-                loader.classList.add('hidden');
-                document.body.removeChild(exportDiv);
-                showToast("Gagal menyusun PDF.", "error");
-            });
+            exportToF4PDF(htmlContent, `Mingguan_${kelas.replace(/\s+/g,'_')}.pdf`, "Menyusun PDF Mingguan (F4)...");
         }
 
         function unduhLaporanIndividu() {
@@ -1061,10 +1096,6 @@
             const kelas = document.getElementById('filter-kelas').value;
             
             if(!namaSiswa || !bulanThn) return showToast("Pastikan tampilkan data individu dulu!", "error");
-            
-            const loader = document.getElementById('global-loader');
-            loader.querySelector('.font-arabic').textContent = "Menyusun Rapor PDF (F4)...";
-            loader.classList.remove('hidden');
 
             const [year, month] = bulanThn.split('-');
             const daysInMonth = new Date(year, month, 0).getDate();
@@ -1083,8 +1114,8 @@
                     const safeZ = (record.ziyadah) ? String(record.ziyadah).trim() : "";
                     const safeM = (record.murojaah) ? String(record.murojaah).trim() : "";
 
-                    if (safeZ !== "" && safeZ !== "-" && !safeZ.toLowerCase().includes('diisi')) { valZ = formatBadge(safeZ, false, 'pdf'); totalZiyadah++; }
-                    if (safeM !== "" && safeM !== "-" && !safeM.toLowerCase().includes('diisi')) { valM = formatBadge(safeM, true, 'pdf'); totalMurojaah++; }
+                    if (safeZ !== "" && safeZ !== "-" && !safeZ.toLowerCase().includes('diisi')) { valZ = formatBadge(safeZ, false, 'pdf', 'flex-start'); totalZiyadah++; }
+                    if (safeM !== "" && safeM !== "-" && !safeM.toLowerCase().includes('diisi')) { valM = formatBadge(safeM, true, 'pdf', 'flex-start'); totalMurojaah++; }
                 }
                 
                 const formatTgl = formatTglLengkap(currentDate);
@@ -1092,89 +1123,64 @@
                 
                 tbodyHtml += `
                     <tr style="background: ${isSunday ? '#fef2f2' : (day % 2 === 0 ? '#f8fafc' : '#ffffff')};">
-                        <td style="padding: 4px 6px; border: 1px solid #cbd5e1; color: ${isSunday ? '#f87171' : '#475569'}; text-align: left;">${formatTgl}</td>
-                        <td style="padding: 4px 6px; border: 1px solid #cbd5e1; text-align: center;">${valM}</td>
-                        <td style="padding: 4px 6px; border: 1px solid #cbd5e1; text-align: center;">${valZ}</td>
+                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; color: ${isSunday ? '#f87171' : '#475569'}; text-align: left; vertical-align: top;">${formatTgl}</td>
+                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; text-align: left; vertical-align: top;">${valM}</td>
+                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; text-align: left; vertical-align: top;">${valZ}</td>
                     </tr>
                 `;
             }
 
-            const templateHTML = `
-                <div style="width: 800px; padding: 10px; font-family: 'Outfit', sans-serif; color: #1e293b; background: white; box-sizing: border-box; margin: 0 auto;">
-                    <div style="text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #0f766e; font-weight: 700; text-transform: uppercase;">Rapor Tahfiz Individu</h1>
-                        <p style="font-size: 14px; margin: 5px 0 0 0; color: #0d9488; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
-                    </div>
-                    
-                    <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
-                        <tr>
-                            <td style="vertical-align: top; width: 60%;">
-                                <table style="border-collapse: collapse;">
-                                    <tr><td style="padding: 3px 15px 3px 0;">Siswa</td><td style="padding: 3px 0;">: ${namaSiswa.toUpperCase()}</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0;">Periode</td><td style="padding: 3px 0;">: Bulan ${monthName}</td></tr>
-                                </table>
-                            </td>
-                            <td style="vertical-align: top; width: 40%;">
-                                <table style="border-collapse: collapse; float: right;">
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #047857;">Total Ziyadah</td><td style="padding: 3px 0; color: #047857;">: ${totalZiyadah} Hari</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #1d4ed8;">Total Murojaah</td><td style="padding: 3px 0; color: #1d4ed8;">: ${totalMurojaah} Hari</td></tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif; text-align: center;">
-                        <thead style="background: #f0fdfa; color: #0f766e; font-family: 'El Messiri', serif;">
-                            <tr>
-                                <th style="padding: 6px; border: 1px solid #5eead4; text-align: left; width: 40%;">Hari, Tanggal</th>
-                                <th style="padding: 6px; border: 1px solid #5eead4; text-align: center; width: 30%;">Murojaah</th>
-                                <th style="padding: 6px; border: 1px solid #5eead4; text-align: center; width: 30%;">Ziyadah</th>
-                            </tr>
-                        </thead>
-                        <tbody>${tbodyHtml}</tbody>
-                    </table>
-                    
-                    <table style="width: 100%; margin-top: 30px; font-size: 13px; text-align: center; page-break-inside: avoid;">
-                        <tr>
-                            <td style="width: 50%; vertical-align: bottom;">
-                                <p style="margin: 0 0 50px 0;">Mengetahui,<br>Orang Tua / Wali</p>
-                                <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px;"></p>
-                            </td>
-                            <td style="width: 50%; vertical-align: bottom;">
-                                <p style="margin: 0 0 50px 0;">Wonosobo, ........................<br>Ustaz/ah Pengampu</p>
-                                <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px;"></p>
-                            </td>
-                        </tr>
-                    </table>
+            const htmlContent = `
+                <div style="text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #0f766e; font-weight: 700; text-transform: uppercase;">Rapor Tahfiz Individu</h1>
+                    <p style="font-size: 14px; margin: 5px 0 0 0; color: #0d9488; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
                 </div>
+                
+                <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
+                    <tr>
+                        <td style="vertical-align: top; width: 60%;">
+                            <table style="border-collapse: collapse;">
+                                <tr><td style="padding: 3px 15px 3px 0;">Ustaz/ah</td><td style="padding: 3px 0;">: ${currentUser.ustazah}</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0;">Siswa</td><td style="padding: 3px 0;">: ${namaSiswa.toUpperCase()}</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0;">Periode</td><td style="padding: 3px 0;">: Bulan ${monthName}</td></tr>
+                            </table>
+                        </td>
+                        <td style="vertical-align: top; width: 40%;">
+                            <table style="border-collapse: collapse; float: right;">
+                                <tr><td style="padding: 3px 15px 3px 0; color: #047857;">Total Ziyadah</td><td style="padding: 3px 0; color: #047857;">: ${totalZiyadah} Hari</td></tr>
+                                <tr><td style="padding: 3px 15px 3px 0; color: #1d4ed8;">Total Murojaah</td><td style="padding: 3px 0; color: #1d4ed8;">: ${totalMurojaah} Hari</td></tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif;">
+                    <thead style="background: #f0fdfa; color: #0f766e; font-family: 'El Messiri', serif;">
+                        <tr>
+                            <th style="padding: 8px; border: 1px solid #5eead4; text-align: center; width: 40%;">Hari, Tanggal</th>
+                            <th style="padding: 8px; border: 1px solid #5eead4; text-align: center; width: 30%;">Murojaah</th>
+                            <th style="padding: 8px; border: 1px solid #5eead4; text-align: center; width: 30%;">Ziyadah</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tbodyHtml}</tbody>
+                </table>
+                
+                <table style="width: 100%; margin-top: 40px; font-size: 13px; text-align: center; page-break-inside: avoid;">
+                    <tr>
+                        <td style="width: 50%; vertical-align: bottom;">
+                            <p style="margin: 0 0 50px 0;">Mengetahui,<br>Orang Tua / Wali</p>
+                            <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px;"></p>
+                        </td>
+                        <td style="width: 50%; vertical-align: bottom;">
+                            <p style="margin: 0 0 50px 0;">Wonosobo, ........................<br>Ustaz/ah Pengampu</p>
+                            <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px; font-weight: 700; font-size: 14px;">${currentUser.ustazah}</p>
+                        </td>
+                    </tr>
+                </table>
             `;
 
-            const exportDiv = document.createElement('div');
-            exportDiv.style.position = 'absolute';
-            exportDiv.style.left = '-9999px';
-            exportDiv.style.top = '0';
-            exportDiv.style.width = '800px'; 
-            exportDiv.innerHTML = templateHTML;
-            document.body.appendChild(exportDiv);
-
-            const opt = {
-                margin:       20,
-                filename:     `Individu_${namaSiswa.replace(/\s+/g,'_')}_${monthName}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, windowWidth: 800 },
-                jsPDF:        { unit: 'mm', format: [210, 330], orientation: 'portrait' } 
-            };
-
-            html2pdf().set(opt).from(exportDiv).save().then(() => {
-                loader.classList.add('hidden');
-                document.body.removeChild(exportDiv);
-                showToast("Rapor PDF (F4) berhasil diunduh!", "success");
-            }).catch(err => {
-                loader.classList.add('hidden');
-                document.body.removeChild(exportDiv);
-                showToast("Gagal menyusun PDF.", "error");
-            });
+            exportToF4PDF(htmlContent, `Individu_${namaSiswa.replace(/\s+/g,'_')}_${monthName}.pdf`, "Menyusun PDF Rapor (F4)...");
         }
 
         // --- HELPER FUNGSI ---
