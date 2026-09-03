@@ -5,16 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Aplikasi Ustaz/ah - Program Mutqin</title>
     
+    <meta name="description" content="Aplikasi input dan rekap hafalan Ustaz/ah Program Mutqin SD Muhammadiyah Sudagaran Wonosobo">
+    <meta name="theme-color" content="#047857">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
+    <link rel="dns-prefetch" href="https://docs.google.com">
+    <link rel="dns-prefetch" href="https://script.google.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://iili.io">
+    <!-- Hanya memuat bobot font yang benar-benar dipakai (400/700 arab, 400/500/600/700/900 sans) -->
+    <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@400;700&family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Mesin Render Stabil Khusus Laporan Presisi (F4 Fit 1 Lembar) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js & html2pdf (gabungan html2canvas+jsPDF) TIDAK dimuat di awal.
+         Keduanya baru dimuat sesuai kebutuhan (lazy-load) lewat loadScriptOnce()
+         agar beban halaman awal jauh lebih ringan. Lihat blok script utama. -->
 
     <script>
         tailwind.config = {
@@ -52,7 +59,6 @@
         .toast.success { background: linear-gradient(135deg, #10b981, #059669); }
         .toast.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
         .toast.info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-        .toast.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
         
         /* Animasi Loader */
         .loader { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #ffffff; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
@@ -78,7 +84,7 @@
     <div id="global-loader" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-[9999] hidden flex-col justify-center items-center">
         <div class="loader loader-dark w-12 h-12 border-4 mb-4"></div>
         <h3 class="font-arabic font-bold text-xl text-emerald-700">Memproses Laporan...</h3>
-        <p class="text-slate-500 text-sm mt-2 text-center px-6">Menyelaraskan margin presisi kertas F4...<br>Mohon tunggu sebentar.</p>
+        <p class="text-slate-500 text-sm mt-2 text-center px-6">Menyelaraskan margin dan tabel laporan...<br>Mohon tunggu sebentar.</p>
     </div>
 
     <header class="bg-gradient-to-r from-emerald-800 to-teal-700 text-white p-4 shadow-xl sticky top-0 z-40 relative overflow-hidden">
@@ -86,7 +92,7 @@
         <div class="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 relative z-10">
             <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
                 <div class="bg-white p-1 rounded-full shadow-lg">
-                    <img src="https://iili.io/CSy5Naa.md.png" alt="Logo" class="h-10 w-10 md:h-12 md:w-12 rounded-full">
+                    <img src="https://iili.io/CSy5Naa.md.png" alt="Logo" width="48" height="48" decoding="async" fetchpriority="high" class="h-10 w-10 md:h-12 md:w-12 rounded-full">
                 </div>
                 <div class="text-center md:text-left">
                     <h1 class="font-bold text-lg md:text-xl tracking-wide">APLIKASI USTAZ/AH</h1>
@@ -141,15 +147,97 @@
             </div>
         </section>
 
-        <!-- ================= SCREEN 2: ENTRY DATA ================= -->
-        <section id="entry-screen" class="screen">
-            <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8 max-w-4xl mx-auto relative border border-emerald-100 bg-pattern">
-                <button type="button" onclick="navigate('login')" class="absolute top-6 left-6 text-slate-400 hover:text-emerald-600 bg-white shadow-sm p-2 rounded-full transition-colors border border-slate-100" title="Kembali">
+        <!-- ================= SCREEN 2: SIMULASI MUROJAAH ================= -->
+        <section id="simulasi-screen" class="screen">
+            <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8 max-w-4xl mx-auto relative border border-slate-200 overflow-hidden">
+                <button type="button" onclick="navigate('login')" class="absolute top-6 left-6 text-slate-400 hover:text-emerald-600 bg-white shadow-sm p-2 rounded-full transition-colors border border-slate-100" title="Kembali ke Beranda">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 </button>
-                <button type="button" onclick="navigate('dashboard'); setDashboardClass(currentUser.kelas);" class="absolute top-6 right-6 text-emerald-600 font-bold text-sm bg-emerald-50 px-4 py-2 rounded-full hover:bg-emerald-100 transition-colors flex items-center gap-1 shadow-sm border border-emerald-200">
-                    Ke Dasbor
+                
+                <div class="text-center mb-8 pt-4">
+                    <h2 class="text-3xl font-bold font-arabic text-emerald-800">Simulasi Tabel Murojaah</h2>
+                    <p class="text-slate-500 font-medium mt-1">Referensi Siklus Pengulangan Hafalan Al-Qur'an (MUTQIN)</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- Siklus 10 Hari -->
+                    <div class="bg-white rounded-2xl p-5 border-2 border-emerald-100 shadow-md relative overflow-hidden group hover:border-emerald-300 transition-colors">
+                        <div class="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="bg-emerald-100 text-emerald-700 p-2.5 rounded-xl font-bold text-xl">10</div>
+                            <h3 class="font-bold text-slate-700 text-lg">Siklus 10 Hari</h3>
+                        </div>
+                        <ul class="space-y-2 text-sm font-medium text-slate-600">
+                            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 1 Halaman / Hari</li>
+                            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 10 Hari Tuntas 1/2 Juz</li>
+                            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Standar Mutqin Ideal</li>
+                        </ul>
+                    </div>
+
+                    <!-- Siklus 15 Hari -->
+                    <div class="bg-white rounded-2xl p-5 border-2 border-amber-100 shadow-md relative overflow-hidden group hover:border-amber-300 transition-colors">
+                        <div class="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="bg-amber-100 text-amber-700 p-2.5 rounded-xl font-bold text-xl">15</div>
+                            <h3 class="font-bold text-slate-700 text-lg">Siklus 15 Hari</h3>
+                        </div>
+                        <ul class="space-y-2 text-sm font-medium text-slate-600">
+                            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> 2/3 Halaman / Hari</li>
+                            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> 15 Hari Tuntas 1/2 Juz</li>
+                            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Beban Menengah</li>
+                        </ul>
+                    </div>
+
+                    <!-- Siklus 20 Hari -->
+                    <div class="bg-white rounded-2xl p-5 border-2 border-rose-100 shadow-md relative overflow-hidden group hover:border-rose-300 transition-colors">
+                        <div class="absolute top-0 left-0 w-full h-2 bg-rose-500"></div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="bg-rose-100 text-rose-700 p-2.5 rounded-xl font-bold text-xl">20</div>
+                            <h3 class="font-bold text-slate-700 text-lg">Siklus 20 Hari</h3>
+                        </div>
+                        <ul class="space-y-2 text-sm font-medium text-slate-600">
+                            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> 1/2 Halaman / Hari</li>
+                            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> 20 Hari Tuntas 1/2 Juz</li>
+                            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Khusus Anak Kesulitan</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 md:p-6 shadow-sm mb-6">
+                    <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                        Pemetaan Kualitas Murojaah
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs font-bold mt-0.5 whitespace-nowrap">Mutqin</span>
+                            <p class="text-sm text-slate-600 font-medium">Lancar sempurna, tanpa kesalahan makhraj/tajwid, dan cepat saat mengulang.</p>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <span class="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-bold mt-0.5 whitespace-nowrap">I'adah</span>
+                            <p class="text-sm text-slate-600 font-medium">Banyak tersendat, butuh bimbingan ulang/teguran sebelum lanjut ayat berikutnya.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" onclick="navigate('entry')" class="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 transition-all shadow-md transform active:scale-95 flex justify-center items-center gap-2">
+                    Lanjut ke Input Setoran
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
                 </button>
+            </div>
+        </section>
+
+        <!-- ================= SCREEN 3: ENTRY DATA ================= -->
+        <section id="entry-screen" class="screen">
+            <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8 max-w-4xl mx-auto relative border border-emerald-100 bg-pattern">
+                <button type="button" onclick="navigate('simulasi')" class="absolute top-6 left-6 text-slate-400 hover:text-emerald-600 bg-white shadow-sm p-2 rounded-full transition-colors border border-slate-100" title="Kembali ke Simulasi">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                </button>
+                <div class="absolute top-6 right-6 flex gap-2">
+                    <button type="button" onclick="navigate('dashboard'); setDashboardClass(currentUser.kelas);" class="text-emerald-600 font-bold text-sm bg-emerald-50 px-4 py-2 rounded-full hover:bg-emerald-100 transition-colors flex items-center gap-1 shadow-sm border border-emerald-200">
+                        Ke Dasbor
+                    </button>
+                </div>
                 
                 <h2 class="text-2xl font-bold font-arabic text-center text-emerald-800 mb-6 mt-14">Input Setoran Hafalan</h2>
                 
@@ -166,7 +254,7 @@
             </div>
         </section>
 
-        <!-- ================= SCREEN 3: DASHBOARD ================= -->
+        <!-- ================= SCREEN 4: DASHBOARD ================= -->
         <section id="dashboard-screen" class="screen">
             <div class="bg-white rounded-3xl shadow-xl p-5 md:p-8 border border-slate-100">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 pb-6 border-b border-slate-100">
@@ -181,7 +269,7 @@
                         <button onclick="loadDashboard(document.getElementById('filter-kelas').value, true)" class="bg-indigo-50 border border-indigo-200 text-indigo-600 p-2.5 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm" title="Segarkan Data Server (Sinkronisasi Penuh)">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg>
                         </button>
-                        <button onclick="navigate('login')" class="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title="Kembali ke Beranda">
+                        <button onclick="navigate('entry')" class="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title="Kembali ke Input">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" /></svg>
                         </button>
                     </div>
@@ -189,9 +277,9 @@
 
                 <div id="dashboard-content" class="hidden">
                     <div class="flex flex-col md:flex-row border-b border-slate-200 mb-6 bg-slate-100 rounded-t-xl overflow-hidden shadow-inner">
-                        <button class="tab-btn active flex-1 py-3 px-2 text-sm font-semibold text-slate-500 transition-colors border-r border-slate-200" onclick="switchTab('harian')">Rekap Harian</button>
-                        <button class="tab-btn flex-1 py-3 px-2 text-sm font-semibold text-slate-500 transition-colors border-r border-slate-200" onclick="switchTab('mingguan')">Rekap Mingguan</button>
-                        <button class="tab-btn flex-1 py-3 px-2 text-sm font-semibold text-slate-500 transition-colors" onclick="switchTab('individu')">Rekap Individu (Bulan)</button>
+                        <button class="tab-btn active flex-1 py-3 px-2 text-sm font-semibold text-slate-500 transition-colors border-r border-slate-200" onclick="switchTab('harian', this)">Rekap Harian</button>
+                        <button class="tab-btn flex-1 py-3 px-2 text-sm font-semibold text-slate-500 transition-colors border-r border-slate-200" onclick="switchTab('mingguan', this)">Rekap Mingguan</button>
+                        <button class="tab-btn flex-1 py-3 px-2 text-sm font-semibold text-slate-500 transition-colors" onclick="switchTab('individu', this)">Rekap Individu (Bulan)</button>
                     </div>
 
                     <!-- TAB HARIAN -->
@@ -232,7 +320,7 @@
                                     <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
                                         <tr>
                                             <th class="p-3 font-bold text-center w-12">No</th>
-                                            <th class="p-3 font-bold text-center">Nama Murid</th>
+                                            <th class="p-3 font-bold">Nama Murid</th>
                                             <th class="p-3 font-bold text-center w-1/4">Ziyadah</th>
                                             <th class="p-3 font-bold text-center w-1/4">Murojaah</th>
                                         </tr>
@@ -268,7 +356,7 @@
                                     <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
                                         <tr>
                                             <th class="p-3 font-bold text-center w-12">No</th>
-                                            <th class="p-3 font-bold text-center">Nama Murid</th>
+                                            <th class="p-3 font-bold">Nama Murid</th>
                                             <th class="p-3 font-bold text-center">Ziyadah (Hari)</th>
                                             <th class="p-3 font-bold text-center">Murojaah (Hari)</th>
                                         </tr>
@@ -309,7 +397,7 @@
                                 <table class="w-full text-left text-sm whitespace-nowrap">
                                     <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
                                         <tr>
-                                            <th class="p-3 font-bold text-center w-1/3">Hari, Tanggal</th>
+                                            <th class="p-3 font-bold w-1/3">Hari, Tanggal</th>
                                             <th class="p-3 font-bold text-center w-1/3">Murojaah</th>
                                             <th class="p-3 font-bold text-center w-1/3">Ziyadah</th>
                                         </tr>
@@ -340,8 +428,33 @@
     <div id="toast-container"></div>
 
     <script>
-        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQUd7iLtgh1Py55DxxT9kd9nrA-bHsC9845Hf8d5_z1Aw5i_tp99dPxx7r_tyFMOpCRR4tBMkKjpk1V/pub?gid=1746779222&single=true&output=csv";
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnhvEEVToXKvMWAmLYcWceQk-sV1790zeAdQAyuf9n4Px8DhjmJFdkY9aOAl-I1DuB/exec";
+        // Kredensial Database Supabase (Langsung Terhubung)
+        const SUPABASE_URL = "https://pvnumwfezbjndynazlqx.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_Cmxc7BbbI2OBsZnwJNvc9A_fOUOfI5W";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- LAZY LOADER UNTUK LIBRARY BERAT (Chart.js & html2pdf) ---
+        // Library besar hanya diunduh browser saat benar-benar dipakai,
+        // bukan saat halaman pertama kali dibuka -> initial load jauh lebih ringan.
+        const CDN_CHARTJS = "https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js";
+        const CDN_HTML2PDF = "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js";
+        const _scriptCache = {};
+        
+        function loadScriptOnce(src) {
+            if (_scriptCache[src]) return _scriptCache[src];
+            _scriptCache[src] = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = src; s.async = true;
+                s.onload = () => resolve();
+                s.onerror = () => { delete _scriptCache[src]; reject(new Error('Gagal memuat library: ' + src)); };
+                document.head.appendChild(s);
+            });
+            return _scriptCache[src];
+        }
+
+        // --- CACHE RINGAN UNTUK DAFTAR SISWA (stale-while-revalidate) ---
+        const SISWA_CACHE_KEY = 'mutqin_siswa_cache_v2';
+        const SISWA_CACHE_TTL = 10 * 60 * 1000; // 10 menit
 
         let allSiswa = [];
         let allRecords = []; 
@@ -350,89 +463,98 @@
         let dataMingguanSiswa = [];
         let globalDatesMingguan = [];
         let isDataLoaded = false;
+        let cachedUsed = false;
 
         const ustazahData = [
             "Isti Baroroh, S.Pd.I", "Lina Mar'atu Solikhah, S. H", "Diella Anggun Amalia, S.Pd.I", 
             "Ufi Nur Ardhina, S.Psi", "Lely Apriliani, M.Pd.", "Muhammad Ali Al-Faruqi", 
-            "Aria Kurniawati Sampurno, S.T., S.Pd.", "Hidayati Rohmah", "Eni Retnowati, S.Si.","Khilya Luthfiyani", 
+            "Aria Kurniawati Sampurno, S.T., S.Pd.", "Hidayati Rohmah", "Eni Retnowati, S.Si.", 
             "Nasoha", "Ayu Puspitosari, S.Pd.", "Nur Hidayati, S.Pd.", "Kuat Santoso, S.Pd.I.", 
             "Subandi, S.Pd.", "Nasihin, S.Pd."
         ];
 
-        // --- FUNGSI PARSER CSV ---
-        function parseCSV(str) {
-            const arr = [];
-            let quote = false, row = 0, col = 0;
-            for (let c = 0; c < str.length; c++) {
-                let cc = str[c], nc = str[c+1];
-                arr[row] = arr[row] || []; arr[row][col] = arr[row][col] || '';
-                if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
-                if (cc === '"') { quote = !quote; continue; }
-                if (cc === ',' && !quote) { ++col; continue; }
-                if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
-                if (cc === '\n' && !quote) { ++row; col = 0; continue; }
-                if (cc === '\r' && !quote) { ++row; col = 0; continue; }
-                arr[row][col] += cc;
-            }
-            return arr;
+        function populateKelasDropdowns(daftarSiswa) {
+            const kelasSelect = document.getElementById('kelas');
+            const uniqueKelas = [...new Set(daftarSiswa.map(s => s.kelas))].sort();
+            kelasSelect.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+            document.getElementById('filter-kelas').innerHTML = '<option value="">-- Pilih Kelas --</option>';
+            uniqueKelas.forEach(k => {
+                kelasSelect.add(new Option(k, k));
+                document.getElementById('filter-kelas').add(new Option(k, k));
+            });
         }
 
         // --- INIT ---
         async function init() {
             setClock(); setInterval(setClock, 1000);
-            
+
             const statusEl = document.getElementById('login-status');
             const ustazahSelect = document.getElementById('ustazah');
-            const kelasSelect = document.getElementById('kelas');
-            
+
             document.getElementById('filter-bulan-individu').value = new Date().toISOString().slice(0, 7);
             ustazahData.forEach(u => ustazahSelect.add(new Option(u, u)));
 
+            // 1) Coba tampilkan instan dari cache lokal (stale-while-revalidate)
             try {
-                const res = await fetch(CSV_URL + '&t=' + Date.now());
-                if (!res.ok) throw new Error("Gagal mengambil CSV");
-                const data = await res.text();
-                
-                if (data.toLowerCase().startsWith('<!doctype')) throw new Error("Link salah, ini halaman web.");
-                
-                const rows = parseCSV(data);
-                if (rows.length < 2) throw new Error("Data CSV kosong.");
-
-                const headers = rows[0].map(h => (h || '').toLowerCase().trim());
-                let cKelas = headers.findIndex(h => h.includes('kelas'));
-                let cNama = headers.findIndex(h => h.includes('nama') || h.includes('siswa'));
-                if (cKelas === -1) cKelas = 1; 
-                if (cNama === -1) cNama = 2;   
-
-                allSiswa = [];
-                for (let i = 1; i < rows.length; i++) {
-                    const r = rows[i];
-                    if (r && r.length > Math.max(cKelas, cNama)) {
-                        const k = (r[cKelas] || '').trim();
-                        const n = (r[cNama] || '').trim();
-                        if (k && n) allSiswa.push({ kelas: k, nama: n });
+                const cached = JSON.parse(localStorage.getItem(SISWA_CACHE_KEY) || 'null');
+                if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
+                    allSiswa = cached.data;
+                    populateKelasDropdowns(allSiswa);
+                    const umur = Date.now() - cached.ts;
+                    if (umur < SISWA_CACHE_TTL) {
+                        statusEl.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Data siap';
+                        statusEl.classList.replace('text-emerald-600', 'text-emerald-700');
+                        setTimeout(() => statusEl.style.display = 'none', 1200);
+                        cachedUsed = true;
+                    } else {
+                        statusEl.innerHTML = '<span class="loader border-emerald-500 border-t-transparent w-4 h-4"></span> Menyegarkan data...';
                     }
                 }
+            } catch (e) { /* cache tidak valid, abaikan */ }
 
-                if(allSiswa.length > 0) {
-                    statusEl.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Data siap';
-                    statusEl.classList.replace('text-emerald-600', 'text-emerald-700');
-                    setTimeout(() => statusEl.style.display = 'none', 1500);
+            // 2) Tarik data terbaru siswa dari Supabase
+            try {
+                const { data, error } = await supabaseClient
+                    .from('data_siswa')
+                    .select('kelas, nama');
+                
+                if (error) throw error;
+                if (!data || data.length === 0) throw new Error("Data siswa kosong di database.");
 
-                    const uniqueKelas = [...new Set(allSiswa.map(s => s.kelas))].sort();
-                    kelasSelect.innerHTML = '<option value="">-- Pilih Kelas --</option>';
-                    document.getElementById('filter-kelas').innerHTML = '<option value="">-- Pilih Kelas --</option>';
-                    
-                    uniqueKelas.forEach(k => {
-                        kelasSelect.add(new Option(k, k));
-                        document.getElementById('filter-kelas').add(new Option(k, k));
-                    });
-                } else throw new Error("Tidak ada data siswa.");
+                allSiswa = data;
+                populateKelasDropdowns(allSiswa);
+
+                try { localStorage.setItem(SISWA_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: allSiswa })); } catch (e) {}
+
+                statusEl.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Data siap';
+                statusEl.classList.replace('text-emerald-600', 'text-emerald-700');
+                setTimeout(() => statusEl.style.display = 'none', 1200);
             } catch (e) {
-                statusEl.classList.replace('bg-emerald-50', 'bg-red-50');
-                statusEl.classList.replace('text-emerald-600', 'text-red-600');
-                statusEl.innerHTML = `⚠️ Error: ${e.message}`;
+                if (!cachedUsed) {
+                    statusEl.classList.replace('bg-emerald-50', 'bg-red-50');
+                    statusEl.classList.replace('text-emerald-600', 'text-red-600');
+                    statusEl.innerHTML = `⚠️ Error Database: ${e.message}`;
+                } else {
+                    showToast("Gagal menyegarkan data, memakai data tersimpan.", "info");
+                    statusEl.style.display = 'none';
+                }
             }
+
+            // Prefetch Chart.js di waktu luang browser (tidak menghalangi hal lain)
+            const prefetchChart = () => loadScriptOnce(CDN_CHARTJS).catch(() => {});
+            if ('requestIdleCallback' in window) requestIdleCallback(prefetchChart, { timeout: 4000 });
+            else setTimeout(prefetchChart, 2000);
+        }
+
+        // --- NAVIGASI ---
+        function navigate(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            setTimeout(() => {
+                const targetScreen = document.getElementById(screenId + '-screen');
+                if (targetScreen) {
+                    targetScreen.classList.add('active');
+                }
+            }, 50);
         }
 
         // --- INTERAKSI DROPDOWN ---
@@ -464,10 +586,12 @@
             document.getElementById('display-ustazah').textContent = currentUser.ustazah;
             document.getElementById('display-kelas').textContent = currentUser.kelas;
             renderStudentList(currentUser.kelas);
-            navigate('entry');
+            
+            // Navigate to simulasi first, as requested in previous instruction
+            navigate('simulasi');
         });
 
-        // --- RENDER DAFTAR SISWA (JENDELA 2) ---
+        // --- RENDER DAFTAR SISWA (JENDELA 3) ---
         function renderStudentList(kelas) {
             const container = document.getElementById('student-list-container');
             const studentsInClass = allSiswa.filter(s => s.kelas === kelas);
@@ -523,7 +647,7 @@
         }
 
         // --- SIMPAN ZIYADAH / MUROJAAH ---
-        function saveZiyadah(namaSiswa, index) {
+        async function saveZiyadah(namaSiswa, index) {
             const jenis = document.getElementById(`jenis-setoran-${index}`).value;
             const selectBlokEl = document.getElementById(`select-blok-${index}`);
             const selectStatusEl = document.getElementById(`select-status-${index}`);
@@ -547,62 +671,59 @@
             btnEl.classList.add('opacity-70', 'cursor-not-allowed');
             textEl.innerHTML = '<span class="loader border-t-white w-5 h-5"></span>';
 
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ 
-                    tanggal: new Date().toISOString(), 
-                    nama: namaSiswa, 
-                    kelas: currentUser.kelas, 
-                    murojaah: jenis === 'Murojaah' ? isiTeks : "", 
-                    ziyadah: jenis === 'Ziyadah' ? isiTeks : "" 
-                })
-            })
-            .then(res => res.json())
-            .then(result => {
-                if (result.status === 'success') {
-                    showToast(`Tersimpan: ${namaSiswa}`, "success");
-                    
-                    if (!window.recordsMap) window.recordsMap = {};
-                    const todayStr = getYYYYMMDD(new Date());
-                    const recordKey = `${String(namaSiswa).trim()}_${String(currentUser.kelas).trim()}_${todayStr}`;
-                    
-                    if (!window.recordsMap[recordKey]) {
-                        window.recordsMap[recordKey] = { nama: String(namaSiswa).trim(), kelas: String(currentUser.kelas).trim(), tanggal: new Date().toISOString(), ziyadah: "", murojaah: "" };
-                    }
-                    
-                    if (jenis === "Ziyadah") {
-                        window.recordsMap[recordKey].ziyadah = isiTeks;
-                    } else {
-                        window.recordsMap[recordKey].murojaah = isiTeks;
-                    }
-                    isDataLoaded = true;
+            const payload = {
+                tanggal: new Date().toISOString(), 
+                nama: namaSiswa, 
+                kelas: currentUser.kelas, 
+                murojaah: jenis === 'Murojaah' ? isiTeks : "", 
+                ziyadah: jenis === 'Ziyadah' ? isiTeks : "" 
+            };
 
-                    // Ikon Centang Hijau Permanen
-                    btnEl.classList.remove('bg-amber-400', 'hover:bg-amber-500', 'opacity-70', 'cursor-not-allowed');
-                    btnEl.classList.add('bg-emerald-500', 'pointer-events-none'); 
-                    textEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>';
+            try {
+                // Post Data ke Supabase
+                const { error } = await supabaseClient
+                    .from('riwayat_setoran')
+                    .insert([payload]);
+                
+                if (error) throw error;
+
+                showToast(`Tersimpan: ${namaSiswa}`, "success");
+                
+                if (!window.recordsMap) window.recordsMap = {};
+                const todayStr = getYYYYMMDD(new Date());
+                const recordKey = `${String(namaSiswa).trim()}_${String(currentUser.kelas).trim()}_${todayStr}`;
+                
+                if (!window.recordsMap[recordKey]) {
+                    window.recordsMap[recordKey] = { nama: String(namaSiswa).trim(), kelas: String(currentUser.kelas).trim(), tanggal: new Date().toISOString(), ziyadah: "", murojaah: "" };
+                }
+                
+                if (jenis === "Ziyadah") {
+                    window.recordsMap[recordKey].ziyadah = isiTeks;
+                } else {
+                    window.recordsMap[recordKey].murojaah = isiTeks;
+                }
+                isDataLoaded = true; // Mark as dirty so dashboard refetches if needed
+
+                // Ikon Centang Hijau Permanen
+                btnEl.classList.remove('bg-amber-400', 'hover:bg-amber-500', 'opacity-70', 'cursor-not-allowed');
+                btnEl.classList.add('bg-emerald-500', 'pointer-events-none'); 
+                textEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>';
                     
-                } else throw new Error(result.message);
-            })
-            .catch(err => {
+            } catch (err) {
+                console.error("Supabase Error:", err);
                 showToast("Gagal menyimpan data.", "error");
                 btnEl.disabled = false; btnEl.classList.remove('opacity-70', 'cursor-not-allowed');
                 textEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>';
-            });
+            }
         }
 
-        // --- NAVIGASI ---
-        function navigate(screenId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            setTimeout(() => document.getElementById(screenId + '-screen').classList.add('active'), 50);
-        }
-
-        function switchTab(tabId) {
+        // --- DASHBOARD TAB NAVIGATION ---
+        function switchTab(tabId, btnEl) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById(`tab-${tabId}`).classList.add('active');
+            if (btnEl) btnEl.classList.add('active');
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            if(targetTab) targetTab.classList.add('active');
         }
 
         document.getElementById('filter-kelas').addEventListener('change', (e) => loadDashboard(e.target.value));
@@ -613,7 +734,7 @@
         }
 
         // --- FORMAT LENCANA (SMART BADGES) ---
-        function formatBadge(text, isMurojaah, scaleType, align = 'center') {
+        function formatBadge(text, isMurojaah, scaleType) {
             if(!text || text === '-' || text.toLowerCase().includes('diisi')) return `<span style="color:#cbd5e1;">-</span>`;
 
             let defaultBg = isMurojaah ? '#dbeafe' : '#d1fae5';
@@ -640,8 +761,10 @@
                 else if (lower.includes('blok krem')) { bg = '#ffedd5'; textCol = '#9a3412'; }
                 else if (lower === 'l' || lower.includes('- l -')) { bg = '#bbf7d0'; textCol = '#166534'; }
                 else if (lower === 'bl' || lower.includes('- bl -')) { bg = '#fecaca'; textCol = '#991b1b'; }
+                else if (lower.includes('[mutqin]')) { bg = '#ccfbf1'; textCol = '#0f766e'; }
+                else if (lower.includes('[i\'adah]') || lower.includes('[iadah]')) { bg = '#ffedd5'; textCol = '#c2410c'; }
 
-                return `<span style="background-color: ${bg}; color: ${textCol}; padding: ${paddingMain}; border-radius: ${borderRadiusMain}; font-size: ${fontSizeText}; font-weight: 700; display: inline-block; line-height: 1; white-space: nowrap; text-align: ${align === 'flex-start' ? 'left' : 'center'};">${text}</span>`;
+                return `<span style="background-color: ${bg}; color: ${textCol}; padding: ${paddingMain}; border-radius: ${borderRadiusMain}; font-size: ${fontSizeText}; font-weight: 700; display: inline-block; line-height: 1;">${text.replace(/\[Mutqin\]|\[I'adah\]|\[iadah\]/gi, '').trim()}</span>`;
             }
 
             let formattedParts = parts.map(p => {
@@ -654,11 +777,13 @@
                 else if (lower === 'blok krem') { bg = '#ffedd5'; textCol = '#9a3412'; isBadge = true; }
                 else if (lower === 'l') { bg = '#bbf7d0'; textCol = '#166534'; isBadge = true; val = 'L'; }
                 else if (lower === 'bl') { bg = '#fecaca'; textCol = '#991b1b'; isBadge = true; val = 'BL'; }
+                else if (lower === '[mutqin]') { bg = '#ccfbf1'; textCol = '#0f766e'; isBadge = true; val = 'Mutqin'; }
+                else if (lower === '[i\'adah]' || lower === '[iadah]') { bg = '#ffedd5'; textCol = '#c2410c'; isBadge = true; val = "I'adah"; }
 
                 if (isBadge) return `<span style="background-color: ${bg}; color: ${textCol}; padding: ${paddingBadge}; border-radius: ${borderRadiusBadge}; font-size: ${fontSizeBadge}; font-weight: 800; margin-right: ${marginBadge}; display:inline-block; vertical-align: middle; line-height: 1; white-space: nowrap;">${val}</span>`;
-                else return `<span style="color: ${defaultCol}; font-weight: 700; font-size: ${fontSizeText}; vertical-align: middle; line-height: 1; white-space: nowrap;">${val}</span>`;
+                else return `<span style="color: ${defaultCol}; font-weight: 700; font-size: ${fontSizeText}; vertical-align: middle; line-height: 1;">${val}</span>`;
             });
-            return `<div style="display: flex; align-items: center; justify-content: ${align}; flex-wrap: wrap; gap: ${marginBadge};">${formattedParts.join('')}</div>`;
+            return `<div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: ${marginBadge};">${formattedParts.join('')}</div>`;
         }
 
         function getWeeklyBadgeWeb(count) {
@@ -669,10 +794,10 @@
         }
 
         function getWeeklyBadgeExport(count) {
-            if (count <= 1) return `<span style="color:#ef4444; font-weight:bold; font-size:12px;">${count} Hari</span>`;
-            if (count <= 3) return `<span style="color:#f97316; font-weight:bold; font-size:12px;">${count} Hari</span>`;
-            if (count <= 5) return `<span style="color:#3b82f6; font-weight:bold; font-size:12px;">${count} Hari</span>`;
-            return `<span style="color:#d97706; font-weight:bold; font-size:12px;"><svg style="vertical-align: text-bottom; margin-right: 2px;" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="#f59e0b"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>${count} Hari</span>`;
+            if (count <= 1) return `<span style="color:#ef4444; font-weight:bold; font-size:11px;">${count} Hari</span>`;
+            if (count <= 3) return `<span style="color:#f97316; font-weight:bold; font-size:11px;">${count} Hari</span>`;
+            if (count <= 5) return `<span style="color:#3b82f6; font-weight:bold; font-size:11px;">${count} Hari</span>`;
+            return `<span style="color:#d97706; font-weight:bold; font-size:11px;"><svg style="vertical-align: text-bottom; margin-right: 2px;" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 20 20" fill="#f59e0b"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>${count} Hari</span>`;
         }
 
         // --- DASHBOARD DATA ---
@@ -700,17 +825,24 @@
             }
 
             try {
-                const res = await fetch(SCRIPT_URL + '?nocache=' + Date.now());
-                const data = await res.json();
+                // Tarik data dasbor menggunakan filter database (Supabase)
+                const windowDate = new Date();
+                windowDate.setDate(windowDate.getDate() - 45); // Hanya ambil 45 hari terakhir
+                const isoWindow = windowDate.toISOString();
+
+                const { data, error } = await supabaseClient
+                    .from('riwayat_setoran')
+                    .select('*')
+                    .eq('kelas', kelas)
+                    .gte('tanggal', isoWindow);
                 
-                let records = [];
-                if (Array.isArray(data)) records = data;
-                else if (data && Array.isArray(data.data)) records = data.data;
-                else if (data && Array.isArray(data.records)) records = data.records;
+                if (error) throw error;
+                
+                let records = data || [];
                 allRecords = records;
-                
                 window.recordsMap = {};
                 
+                // SISTEM SMART MERGE (Mencegah Ziyadah/Murojaah Tertimpa Saat Refresh Dasbor)
                 allRecords.forEach(r => {
                     const nama = r.nama || r.Nama || r.NAMA || '';
                     const kls = r.kelas || r.Kelas || r.KELAS || '';
@@ -727,6 +859,7 @@
                             if (!window.recordsMap[key]) {
                                 window.recordsMap[key] = { nama: String(nama).trim(), kelas: String(kls).trim(), tanggal: rawTgl, ziyadah: ziyadah, murojaah: murojaah };
                             } else {
+                                // Smart Merge! Jika di hari yang sama ada data lama, jangan hapus/timpa menjadi kosong
                                 if (ziyadah && String(ziyadah).trim() !== '' && String(ziyadah).trim() !== '-') window.recordsMap[key].ziyadah = ziyadah;
                                 if (murojaah && String(murojaah).trim() !== '' && String(murojaah).trim() !== '-') window.recordsMap[key].murojaah = murojaah;
                             }
@@ -740,6 +873,7 @@
                 document.getElementById('dashboard-loader').classList.add('hidden');
                 document.getElementById('dashboard-content').classList.remove('hidden');
             } catch (err) {
+                console.error("Supabase Dashboard Fetch Error:", err);
                 document.getElementById('dashboard-loader').classList.add('hidden');
                 showToast("Gagal memuat rekapitulasi", "error");
             }
@@ -747,7 +881,8 @@
 
         function processDashboardData(kelas) {
             const today = new Date();
-            document.getElementById('label-tgl-harian').textContent = formatTglLengkap(today);
+            const tglHarianEl = document.getElementById('label-tgl-harian');
+            if(tglHarianEl) tglHarianEl.textContent = formatTglLengkap(today);
             const siswaKelas = allSiswa.filter(s => String(s.kelas).trim() === String(kelas).trim());
             
             // 1. DATA HARIAN
@@ -768,7 +903,7 @@
                 tbodyHarian += `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="p-3 border-b border-slate-100 text-center text-slate-400 font-mono">${index + 1}</td>
-                        <td class="p-3 border-b border-slate-100 font-semibold text-slate-700 truncate text-left max-w-[150px]">${siswa.nama}</td>
+                        <td class="p-3 border-b border-slate-100 font-semibold text-slate-700 truncate max-w-[150px]">${siswa.nama}</td>
                         <td class="p-3 border-b border-slate-100 text-center">${valZ}</td>
                         <td class="p-3 border-b border-slate-100 text-center">${valM}</td>
                     </tr>`;
@@ -809,7 +944,7 @@
                 tbodyMingguanHtml += `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="p-3 border-b border-slate-100 text-center text-slate-400 font-mono">${index + 1}</td>
-                        <td class="p-3 border-b border-slate-100 font-semibold text-slate-700 truncate text-left max-w-[150px]">${s.nama}</td>
+                        <td class="p-3 border-b border-slate-100 font-semibold text-slate-700 truncate max-w-[150px]">${s.nama}</td>
                         <td class="p-3 border-b border-slate-100 text-center">${getWeeklyBadgeWeb(s.zCount)}</td>
                         <td class="p-3 border-b border-slate-100 text-center">${getWeeklyBadgeWeb(s.mCount)}</td>
                     </tr>`;
@@ -836,22 +971,23 @@
                 let valZ = '-', valM = '-';
                 if (record) {
                     const safeZ = (record.ziyadah) ? String(record.ziyadah).trim() : ""; const safeM = (record.murojaah) ? String(record.murojaah).trim() : "";
-                    if (safeZ !== "" && safeZ !== "-" && !safeZ.toLowerCase().includes('diisi')) valZ = formatBadge(safeZ, false, 'web', 'flex-start');
-                    if (safeM !== "" && safeM !== "-" && !safeM.toLowerCase().includes('diisi')) valM = formatBadge(safeM, true, 'web', 'flex-start');
+                    if (safeZ !== "" && safeZ !== "-" && !safeZ.toLowerCase().includes('diisi')) valZ = formatBadge(safeZ, false, 'web');
+                    if (safeM !== "" && safeM !== "-" && !safeM.toLowerCase().includes('diisi')) valM = formatBadge(safeM, true, 'web');
                 }
                 const formatTgl = formatTglLengkap(currentDate);
                 const isSunday = currentDate.getDay() === 0;
                 tbodyHtml += `
                     <tr class="hover:bg-slate-50 transition-colors ${isSunday ? 'bg-red-50/50' : ''}">
-                        <td class="p-3 border-b border-slate-100 font-medium text-slate-600 text-left align-top ${isSunday ? 'text-red-400' : ''}">${formatTgl}</td>
-                        <td class="p-3 border-b border-slate-100 text-left align-top">${valM}</td>
-                        <td class="p-3 border-b border-slate-100 text-left align-top">${valZ}</td>
+                        <td class="p-3 border-b border-slate-100 font-medium text-slate-600 ${isSunday ? 'text-red-400' : ''}">${formatTgl}</td>
+                        <td class="p-3 border-b border-slate-100 text-center">${valM}</td>
+                        <td class="p-3 border-b border-slate-100 text-center">${valZ}</td>
                     </tr>`;
             }
             document.getElementById('tbody-individu').innerHTML = tbodyHtml;
         }
 
-        function renderChart(labels, dataZ, dataM) {
+        async function renderChart(labels, dataZ, dataM) {
+            await loadScriptOnce(CDN_CHARTJS);
             const ctx = document.getElementById('weeklyChart').getContext('2d');
             if (weeklyChartInstance) weeklyChartInstance.destroy();
             weeklyChartInstance = new Chart(ctx, {
@@ -872,107 +1008,44 @@
         }
 
         // --- SISTEM UNDUH PDF AESTHETIC (F4 Presisi 1 Lembar Tanpa Layar Bocor/Blank) ---
-        // Fungsi Utama Mesin Render PDF Tunggal
-        function exportToF4PDF(htmlContent, filename, loaderMsg) {
+
+        // Helper terpusat: memuat html2pdf (lazy) lalu merender templateHTML jadi PDF.
+        // Menghindari duplikasi kode di 3 fungsi unduh + memastikan library selalu siap.
+        async function generatePdfFromTemplate(templateHTML, filename, loadingMessage) {
             const loader = document.getElementById('global-loader');
-            loader.querySelector('.font-arabic').textContent = loaderMsg;
-            loader.classList.remove('hidden');
+            if(loader) {
+                loader.querySelector('.font-arabic').textContent = loadingMessage;
+                loader.classList.remove('hidden');
+            }
 
-            const exportId = 'pdf-export-' + Date.now();
-            
-            // Konfigurasi Layar Virtual (Agar HP Merender Tabel Sebagai Desktop)
-            const printContainer = document.createElement('div');
-            printContainer.style.position = 'absolute';
-            printContainer.style.top = '0';
-            printContainer.style.left = '0'; 
-            printContainer.style.width = '800px';
-            printContainer.style.minWidth = '800px'; 
-            // PERBAIKAN: Gunakan z-index negatif dan opacity 0 agar tetap "berada" di layar secara teknis 
-            // Namun tidak terlihat, sehingga sistem Mobile Safari/Chrome tetap mau merendernya (tidak error/blank).
-            printContainer.style.zIndex = '-9999';
-            printContainer.style.opacity = '0'; 
-            printContainer.style.pointerEvents = 'none';
-            
-            printContainer.innerHTML = `
-                <div id="${exportId}" style="width: 800px; padding: 0; margin: 0; background: white; font-family: 'Outfit', sans-serif; color: #1e293b; box-sizing: border-box;">
-                    <style>
-                        /* Gaya Paksa agar CSS luar/tailwind tidak mengganggu tabel PDF */
-                        #${exportId} * { max-width: none !important; box-sizing: border-box; }
-                        #${exportId} table { width: 100% !important; border-collapse: collapse; }
-                        #${exportId} td, #${exportId} th { word-wrap: break-word; white-space: normal; }
-                    </style>
-                    ${htmlContent}
-                </div>
-            `;
-            document.body.appendChild(printContainer);
+            let exportDiv;
+            try {
+                await loadScriptOnce(CDN_HTML2PDF);
 
-            const el = document.getElementById(exportId);
+                exportDiv = document.createElement('div');
+                exportDiv.style.position = 'absolute';
+                exportDiv.style.left = '-9999px';
+                exportDiv.style.top = '0';
+                exportDiv.style.width = '800px';
+                exportDiv.innerHTML = templateHTML;
+                document.body.appendChild(exportDiv);
 
-            // Beri jeda sedikit lebih lama agar browser di HP selesai memuat font sebelum memfotonya
-            setTimeout(() => {
-                html2canvas(el, { scale: 2, useCORS: true, windowWidth: 800, logging: false }).then(canvas => {
-                    const imgData = canvas.toDataURL('image/png');
-                    const { jsPDF } = window.jspdf;
-                    const pdf = new jsPDF('p', 'mm', [210, 330]); // Ukuran F4
-                    
-                    const margin = 15; // Margin Kiri Kanan Atas Bawah = 1.5 cm (15mm)
-                    const maxW = 210 - (margin * 2); // 180 mm
-                    const maxH = 330 - (margin * 2); // 300 mm
-                    
-                    const imgW = canvas.width;
-                    const imgH = canvas.height;
-                    const ratio = imgW / imgH;
-                    
-                    let finalW = maxW;
-                    let finalH = maxW / ratio;
-                    
-                    // Skala Auto-Shrink (Menjamin pasti muat 1 lembar)
-                    if (finalH > maxH) {
-                        finalH = maxH;
-                        finalW = maxH * ratio;
-                    }
-                    
-                    // Pusatkan secara mendatar
-                    const x = margin + (maxW - finalW) / 2;
-                    const y = margin;
-                    
-                    pdf.addImage(imgData, 'PNG', x, y, finalW, finalH);
-                    
-                    // PERBAIKAN METODE DOWNLOAD: Lebih tangguh menembus pemblokiran browser HP
-                    const blob = pdf.output('blob');
-                    const blobUrl = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.style.display = 'none';
-                    link.href = blobUrl;
-                    link.download = filename;
-                    
-                    document.body.appendChild(link);
-                    link.click();
-                    
-                    // Deteksi Browser Dalam Aplikasi (WhatsApp/Line/dll) yang memblokir unduhan
-                    const ua = navigator.userAgent || navigator.vendor || window.opera;
-                    const isInAppBrowser = (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1) || (ua.indexOf("Instagram") > -1) || (ua.indexOf("WhatsApp") > -1) || (ua.indexOf("Line") > -1);
-                    
-                    if(isInAppBrowser) {
-                        showToast("Tips: Jika unduhan tidak muncul, buka web ini di Chrome/Safari.", "warning");
-                    } else {
-                        showToast("Laporan berhasil diunduh!", "success");
-                    }
-                    
-                    setTimeout(() => {
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(blobUrl);
-                        if(document.body.contains(printContainer)) document.body.removeChild(printContainer);
-                    }, 300);
-                    
-                    loader.classList.add('hidden');
-                }).catch(err => {
-                    console.error(err);
-                    if(document.body.contains(printContainer)) document.body.removeChild(printContainer);
-                    loader.classList.add('hidden');
-                    showToast("Gagal menyusun PDF. Silakan coba di Chrome/Safari Desktop.", "error");
-                });
-            }, 800); 
+                const opt = {
+                    margin: 20,
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
+                    jsPDF: { unit: 'mm', format: [210, 330], orientation: 'portrait' }
+                };
+
+                await html2pdf().set(opt).from(exportDiv).save();
+                showToast("Laporan PDF berhasil diunduh!", "success");
+            } catch (err) {
+                showToast("Gagal menyusun PDF.", "error");
+            } finally {
+                if(loader) loader.classList.add('hidden');
+                if (exportDiv) document.body.removeChild(exportDiv);
+            }
         }
 
         function unduhLaporanHarian() {
@@ -999,52 +1072,57 @@
                 tbodyHtml += `
                     <tr style="background: ${no % 2 === 0 ? '#f8fafc' : '#ffffff'};">
                         <td style="padding: 4px; border: 1px solid #a7f3d0; text-align: center; color: #475569;">${no++}</td>
-                        <td style="padding: 4px 8px; border: 1px solid #a7f3d0; font-weight: bold; color: #334155; text-align: left;">${siswa.nama}</td>
+                        <td style="padding: 4px; border: 1px solid #a7f3d0; font-weight: bold; color: #334155;">${siswa.nama}</td>
                         <td style="padding: 4px; border: 1px solid #a7f3d0; text-align: center;">${htmlZ}</td>
                         <td style="padding: 4px; border: 1px solid #a7f3d0; text-align: center;">${htmlM}</td>
                     </tr>`;
             });
 
-            const htmlContent = `
-                <div style="text-align: center; border-bottom: 2px solid #059669; padding-bottom: 15px; margin-bottom: 20px;">
-                    <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #064e3b; font-weight: 700; text-transform: uppercase;">Laporan Tahfiz Harian</h1>
-                    <p style="font-size: 14px; margin: 5px 0 0 0; color: #047857; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
-                </div>
-                
-                <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
-                    <tr>
-                        <td style="vertical-align: top; width: 50%;">
-                            <table style="border-collapse: collapse;">
-                                <tr><td style="padding: 3px 15px 3px 0;">Ustaz/ah</td><td style="padding: 3px 0;">: ${currentUser.ustazah}</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0;">Tanggal</td><td style="padding: 3px 0;">: ${formatTglLengkap(today)}</td></tr>
-                            </table>
-                        </td>
-                        <td style="vertical-align: top; width: 50%;">
-                            <table style="border-collapse: collapse; float: right;">
-                                <tr><td style="padding: 3px 15px 3px 0;">Total Murid</td><td style="padding: 3px 0;">: ${cTot} Siswa</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0; color: #059669;">Ziyadah</td><td style="padding: 3px 0; color: #059669;">: ${cZ} Siswa</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0; color: #2563eb;">Murojaah</td><td style="padding: 3px 0; color: #2563eb;">: ${cM} Siswa</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0; color: #ef4444;">Belum Setor</td><td style="padding: 3px 0; color: #ef4444;">: ${cB} Siswa</td></tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'Outfit', sans-serif;">
-                    <thead style="background: #ecfdf5; color: #064e3b; font-family: 'El Messiri', serif;">
+            const templateHTML = `
+                <div style="width: 800px; padding: 10px; font-family: 'Outfit', sans-serif; color: #1e293b; background: white; box-sizing: border-box; margin: 0 auto;">
+                    <div style="text-align: center; border-bottom: 2px solid #059669; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #064e3b; font-weight: 700; text-transform: uppercase;">Laporan Tahfiz Harian</h1>
+                        <p style="font-size: 14px; margin: 5px 0 0 0; color: #047857; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
+                    </div>
+                    
+                    <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
                         <tr>
-                            <th style="padding: 8px; border: 1px solid #6ee7b7; width: 5%; text-align: center;">No</th>
-                            <th style="padding: 8px; border: 1px solid #6ee7b7; width: 35%; text-align: center;">Nama Murid</th>
-                            <th style="padding: 8px; border: 1px solid #6ee7b7; width: 30%; text-align: center;">Ziyadah</th>
-                            <th style="padding: 8px; border: 1px solid #6ee7b7; width: 30%; text-align: center;">Murojaah</th>
+                            <td style="vertical-align: top; width: 50%;">
+                                <table style="border-collapse: collapse;">
+                                    <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0;">Tanggal</td><td style="padding: 3px 0;">: ${formatTglLengkap(today)}</td></tr>
+                                </table>
+                            </td>
+                            <td style="vertical-align: top; width: 50%;">
+                                <table style="border-collapse: collapse; float: right;">
+                                    <tr><td style="padding: 3px 15px 3px 0;">Total Murid</td><td style="padding: 3px 0;">: ${cTot} Siswa</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #059669;">Ziyadah</td><td style="padding: 3px 0; color: #059669;">: ${cZ} Siswa</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #2563eb;">Murojaah</td><td style="padding: 3px 0; color: #2563eb;">: ${cM} Siswa</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #ef4444;">Belum Setor</td><td style="padding: 3px 0; color: #ef4444;">: ${cB} Siswa</td></tr>
+                                </table>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>${tbodyHtml}</tbody>
-                </table>
+                    </table>
+
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif; text-align: center;">
+                        <thead style="background: #ecfdf5; color: #064e3b; font-family: 'El Messiri', serif;">
+                            <tr>
+                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 5%;">No</th>
+                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 35%; text-align: left;">Nama Murid</th>
+                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 30%;">Ziyadah</th>
+                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 30%;">Murojaah</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tbodyHtml}</tbody>
+                    </table>
+                </div>
             `;
-            
-            exportToF4PDF(htmlContent, `Harian_${kelas.replace(/\s+/g,'_')}_${getYYYYMMDD(today)}.pdf`, "Menyusun PDF Harian (F4)...");
+
+            generatePdfFromTemplate(
+                templateHTML,
+                `Harian_${kelas.replace(/\s+/g,'_')}_${getYYYYMMDD(today)}.pdf`,
+                "Menyusun PDF Harian (F4)..."
+            );
         }
 
         function unduhLaporanMingguan() {
@@ -1053,70 +1131,55 @@
 
             const chartImgUrl = document.getElementById('weeklyChart').toDataURL("image/png");
             const dAwal = globalDatesMingguan[0], dAkhir = globalDatesMingguan[5];
-            
-            let cTot = dataMingguanSiswa.length;
-            let cZ = 0, cM = 0, cB = 0;
-            dataMingguanSiswa.forEach(s => {
-                if (s.zCount > 0) cZ++;
-                if (s.mCount > 0) cM++;
-                if (s.zCount === 0 && s.mCount === 0) cB++;
-            });
-
             let tbodyMingguanHtml = '';
+
             dataMingguanSiswa.forEach((s, i) => {
                 tbodyMingguanHtml += `
                     <tr style="background: ${i % 2 === 0 ? '#f8fafc' : '#ffffff'};">
                         <td style="padding: 4px; border: 1px solid #bfdbfe; text-align: center; color: #475569;">${i + 1}</td>
-                        <td style="padding: 4px 8px; border: 1px solid #bfdbfe; font-weight: bold; color: #334155; text-align: left;">${s.nama}</td>
+                        <td style="padding: 4px; border: 1px solid #bfdbfe; font-weight: bold; color: #334155; text-align: left;">${s.nama}</td>
                         <td style="padding: 4px; border: 1px solid #bfdbfe; text-align: center;">${getWeeklyBadgeExport(s.zCount)}</td>
                         <td style="padding: 4px; border: 1px solid #bfdbfe; text-align: center;">${getWeeklyBadgeExport(s.mCount)}</td>
                     </tr>`;
             });
 
-            const htmlContent = `
-                <div style="text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px;">
-                    <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #1e3a8a; font-weight: 700; text-transform: uppercase;">Rekap Mingguan Tahfiz</h1>
-                    <p style="font-size: 14px; margin: 5px 0 0 0; color: #2563eb; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
-                </div>
-                
-                <table style="width: 100%; margin-bottom: 15px; font-size: 13px; font-weight: 600;">
-                    <tr>
-                        <td style="vertical-align: top; width: 50%;">
-                            <table style="border-collapse: collapse;">
-                                <tr><td style="padding: 3px 15px 3px 0;">Ustaz/ah</td><td style="padding: 3px 0;">: ${currentUser.ustazah}</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0;">Periode</td><td style="padding: 3px 0;">: ${dAwal.toLocaleDateString('id-ID',{day:'2-digit',month:'short'})} - ${dAkhir.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</td></tr>
-                            </table>
-                        </td>
-                        <td style="vertical-align: top; width: 50%;">
-                            <table style="border-collapse: collapse; float: right;">
-                                <tr><td style="padding: 3px 15px 3px 0;">Total Murid</td><td style="padding: 3px 0;">: ${cTot} Siswa</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0; color: #10b981;">Aktif Ziyadah</td><td style="padding: 3px 0; color: #10b981;">: ${cZ} Siswa</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0; color: #2563eb;">Aktif Murojaah</td><td style="padding: 3px 0; color: #2563eb;">: ${cM} Siswa</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0; color: #ef4444;">Belum Setor</td><td style="padding: 3px 0; color: #ef4444;">: ${cB} Siswa</td></tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-                
-                <div style="margin-bottom: 20px; text-align: center;">
-                    <img src="${chartImgUrl}" style="max-width: 100%; height: auto; max-height: 180px; object-fit: contain; margin: 0 auto;" alt="Chart Mingguan">
-                </div>
-
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'Outfit', sans-serif;">
-                    <thead style="background: #eff6ff; color: #1e3a8a; font-family: 'El Messiri', serif;">
+            const templateHTML = `
+                <div style="width: 800px; padding: 10px; font-family: 'Outfit', sans-serif; color: #1e293b; background: white; box-sizing: border-box; margin: 0 auto;">
+                    <div style="text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #1e3a8a; font-weight: 700; text-transform: uppercase;">Rekap Mingguan Tahfiz</h1>
+                        <p style="font-size: 14px; margin: 5px 0 0 0; color: #2563eb; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
+                    </div>
+                    
+                    <table style="width: 100%; margin-bottom: 15px; font-size: 13px; font-weight: 600;">
                         <tr>
-                            <th style="padding: 8px; border: 1px solid #93c5fd; width: 5%; text-align: center;">No</th>
-                            <th style="padding: 8px; border: 1px solid #93c5fd; width: 45%; text-align: center;">Nama Murid</th>
-                            <th style="padding: 8px; border: 1px solid #93c5fd; width: 25%; text-align: center;">Ziyadah (Hari)</th>
-                            <th style="padding: 8px; border: 1px solid #93c5fd; width: 25%; text-align: center;">Murojaah (Hari)</th>
+                            <td style="vertical-align: top; width: 50%;">Kelas: ${kelas}</td>
+                            <td style="vertical-align: top; width: 50%; text-align: right;">Periode: ${dAwal.toLocaleDateString('id-ID',{day:'2-digit',month:'short'})} - ${dAkhir.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</td>
                         </tr>
-                    </thead>
-                    <tbody>${tbodyMingguanHtml}</tbody>
-                </table>
+                    </table>
+                    
+                    <div style="margin-bottom: 20px; text-align: center;">
+                        <img src="${chartImgUrl}" style="max-width: 100%; height: auto; max-height: 150px; object-fit: contain;" alt="Chart Mingguan">
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif; text-align: center;">
+                        <thead style="background: #eff6ff; color: #1e3a8a; font-family: 'El Messiri', serif;">
+                            <tr>
+                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 5%;">No</th>
+                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 45%; text-align: left;">Nama Murid</th>
+                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 25%;">Ziyadah (Hari)</th>
+                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 25%;">Murojaah (Hari)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tbodyMingguanHtml}</tbody>
+                    </table>
+                </div>
             `;
 
-            exportToF4PDF(htmlContent, `Mingguan_${kelas.replace(/\s+/g,'_')}.pdf`, "Menyusun PDF Mingguan (F4)...");
+            generatePdfFromTemplate(
+                templateHTML,
+                `Mingguan_${kelas.replace(/\s+/g,'_')}.pdf`,
+                "Menyusun PDF Mingguan (F4)..."
+            );
         }
 
         function unduhLaporanIndividu() {
@@ -1143,8 +1206,8 @@
                     const safeZ = (record.ziyadah) ? String(record.ziyadah).trim() : "";
                     const safeM = (record.murojaah) ? String(record.murojaah).trim() : "";
 
-                    if (safeZ !== "" && safeZ !== "-" && !safeZ.toLowerCase().includes('diisi')) { valZ = formatBadge(safeZ, false, 'pdf', 'flex-start'); totalZiyadah++; }
-                    if (safeM !== "" && safeM !== "-" && !safeM.toLowerCase().includes('diisi')) { valM = formatBadge(safeM, true, 'pdf', 'flex-start'); totalMurojaah++; }
+                    if (safeZ !== "" && safeZ !== "-" && !safeZ.toLowerCase().includes('diisi')) { valZ = formatBadge(safeZ, false, 'pdf'); totalZiyadah++; }
+                    if (safeM !== "" && safeM !== "-" && !safeM.toLowerCase().includes('diisi')) { valM = formatBadge(safeM, true, 'pdf'); totalMurojaah++; }
                 }
                 
                 const formatTgl = formatTglLengkap(currentDate);
@@ -1152,84 +1215,98 @@
                 
                 tbodyHtml += `
                     <tr style="background: ${isSunday ? '#fef2f2' : (day % 2 === 0 ? '#f8fafc' : '#ffffff')};">
-                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; color: ${isSunday ? '#f87171' : '#475569'}; text-align: left; vertical-align: top;">${formatTgl}</td>
-                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; text-align: left; vertical-align: top;">${valM}</td>
-                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; text-align: left; vertical-align: top;">${valZ}</td>
+                        <td style="padding: 4px 6px; border: 1px solid #cbd5e1; color: ${isSunday ? '#f87171' : '#475569'}; text-align: left;">${formatTgl}</td>
+                        <td style="padding: 4px 6px; border: 1px solid #cbd5e1; text-align: center;">${valM}</td>
+                        <td style="padding: 4px 6px; border: 1px solid #cbd5e1; text-align: center;">${valZ}</td>
                     </tr>
                 `;
             }
 
-            const htmlContent = `
-                <div style="text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 15px; margin-bottom: 20px;">
-                    <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #0f766e; font-weight: 700; text-transform: uppercase;">Rapor Tahfiz Individu</h1>
-                    <p style="font-size: 14px; margin: 5px 0 0 0; color: #0d9488; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
-                </div>
-                
-                <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
-                    <tr>
-                        <td style="vertical-align: top; width: 60%;">
-                            <table style="border-collapse: collapse;">
-                                <tr><td style="padding: 3px 15px 3px 0;">Ustaz/ah</td><td style="padding: 3px 0;">: ${currentUser.ustazah}</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0;">Siswa</td><td style="padding: 3px 0;">: ${namaSiswa.toUpperCase()}</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0;">Periode</td><td style="padding: 3px 0;">: Bulan ${monthName}</td></tr>
-                            </table>
-                        </td>
-                        <td style="vertical-align: top; width: 40%;">
-                            <table style="border-collapse: collapse; float: right;">
-                                <tr><td style="padding: 3px 15px 3px 0; color: #047857;">Total Ziyadah</td><td style="padding: 3px 0; color: #047857;">: ${totalZiyadah} Hari</td></tr>
-                                <tr><td style="padding: 3px 15px 3px 0; color: #1d4ed8;">Total Murojaah</td><td style="padding: 3px 0; color: #1d4ed8;">: ${totalMurojaah} Hari</td></tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-
-                <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif;">
-                    <thead style="background: #f0fdfa; color: #0f766e; font-family: 'El Messiri', serif;">
+            const templateHTML = `
+                <div style="width: 800px; padding: 10px; font-family: 'Outfit', sans-serif; color: #1e293b; background: white; box-sizing: border-box; margin: 0 auto;">
+                    <div style="text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #0f766e; font-weight: 700; text-transform: uppercase;">Rapor Tahfiz Individu</h1>
+                        <p style="font-size: 14px; margin: 5px 0 0 0; color: #0d9488; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
+                    </div>
+                    
+                    <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
                         <tr>
-                            <th style="padding: 8px; border: 1px solid #5eead4; text-align: center; width: 40%;">Hari, Tanggal</th>
-                            <th style="padding: 8px; border: 1px solid #5eead4; text-align: center; width: 30%;">Murojaah</th>
-                            <th style="padding: 8px; border: 1px solid #5eead4; text-align: center; width: 30%;">Ziyadah</th>
+                            <td style="vertical-align: top; width: 60%;">
+                                <table style="border-collapse: collapse;">
+                                    <tr><td style="padding: 3px 15px 3px 0;">Siswa</td><td style="padding: 3px 0;">: ${namaSiswa.toUpperCase()}</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0;">Periode</td><td style="padding: 3px 0;">: Bulan ${monthName}</td></tr>
+                                </table>
+                            </td>
+                            <td style="vertical-align: top; width: 40%;">
+                                <table style="border-collapse: collapse; float: right;">
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #047857;">Total Ziyadah</td><td style="padding: 3px 0; color: #047857;">: ${totalZiyadah} Hari</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #1d4ed8;">Total Murojaah</td><td style="padding: 3px 0; color: #1d4ed8;">: ${totalMurojaah} Hari</td></tr>
+                                </table>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>${tbodyHtml}</tbody>
-                </table>
-                
-                <table style="width: 100%; margin-top: 40px; font-size: 13px; text-align: center; page-break-inside: avoid;">
-                    <tr>
-                        <td style="width: 50%; vertical-align: bottom;">
-                            <p style="margin: 0 0 50px 0;">Mengetahui,<br>Orang Tua / Wali</p>
-                            <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px;"></p>
-                        </td>
-                        <td style="width: 50%; vertical-align: bottom;">
-                            <p style="margin: 0 0 50px 0;">Wonosobo, ........................<br>Ustaz/ah Pengampu</p>
-                            <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px; font-weight: 700; font-size: 14px;">${currentUser.ustazah}</p>
-                        </td>
-                    </tr>
-                </table>
+                    </table>
+
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif; text-align: center;">
+                        <thead style="background: #f0fdfa; color: #0f766e; font-family: 'El Messiri', serif;">
+                            <tr>
+                                <th style="padding: 6px; border: 1px solid #5eead4; text-align: left; width: 40%;">Hari, Tanggal</th>
+                                <th style="padding: 6px; border: 1px solid #5eead4; text-align: center; width: 30%;">Murojaah</th>
+                                <th style="padding: 6px; border: 1px solid #5eead4; text-align: center; width: 30%;">Ziyadah</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tbodyHtml}</tbody>
+                    </table>
+                    
+                    <table style="width: 100%; margin-top: 30px; font-size: 13px; text-align: center; page-break-inside: avoid;">
+                        <tr>
+                            <td style="width: 50%; vertical-align: bottom;">
+                                <p style="margin: 0 0 50px 0;">Mengetahui,<br>Orang Tua / Wali</p>
+                                <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px;"></p>
+                            </td>
+                            <td style="width: 50%; vertical-align: bottom;">
+                                <p style="margin: 0 0 50px 0;">Wonosobo, ........................<br>Ustaz/ah Pengampu</p>
+                                <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px;"></p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
             `;
 
-            exportToF4PDF(htmlContent, `Individu_${namaSiswa.replace(/\s+/g,'_')}_${monthName}.pdf`, "Menyusun PDF Rapor (F4)...");
+            generatePdfFromTemplate(
+                templateHTML,
+                `Individu_${namaSiswa.replace(/\s+/g,'_')}_${monthName}.pdf`,
+                "Menyusun Rapor PDF (F4)..."
+            );
         }
 
         // --- HELPER FUNGSI ---
         function getYYYYMMDD(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-        function formatTglLengkap(d) { return d.toLocaleDateString('id-ID', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }); }
         
-        function setClock() { 
+        function formatTglLengkap(d) { 
+            return d.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }); 
+        }
+
+        function setClock() {
             const now = new Date();
             const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
             const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\./g, ':');
-            document.getElementById('realtime-clock').innerHTML = `${dateStr}, ${timeStr} WIB`; 
+            const clockEl = document.getElementById('realtime-clock');
+            if(clockEl) clockEl.innerHTML = `${dateStr}, ${timeStr} WIB`;
         }
         
         function showToast(msg, type) {
             const tc = document.getElementById('toast-container');
+            if(!tc) return;
             const t = document.createElement('div');
-            t.className = `toast ${type}`; t.textContent = msg;
+            t.className = `toast ${type}`; 
+            t.textContent = msg;
             tc.appendChild(t);
             setTimeout(() => t.classList.add('show'), 10);
-            setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 3000);
+            setTimeout(() => { 
+                t.classList.remove('show'); 
+                setTimeout(() => t.remove(), 400); 
+            }, 3000);
         }
 
         // Start App
