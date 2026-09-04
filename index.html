@@ -19,10 +19,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Chart.js & html2pdf (gabungan html2canvas+jsPDF) TIDAK dimuat di awal.
-         Keduanya baru dimuat sesuai kebutuhan (lazy-load) lewat loadScriptOnce()
-         agar beban halaman awal jauh lebih ringan. Lihat blok script utama. -->
-
+    
     <script>
         tailwind.config = {
             theme: {
@@ -107,7 +104,6 @@
 
     <main class="flex-grow w-full max-w-5xl mx-auto p-4 md:p-6 relative">
         
-        <!-- ================= SCREEN 1: LOGIN ================= -->
         <section id="login-screen" class="screen active">
             <div class="bg-white rounded-3xl shadow-xl p-6 md:p-10 max-w-md mx-auto relative overflow-hidden border border-emerald-50 bg-pattern">
                 <div class="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
@@ -147,7 +143,6 @@
             </div>
         </section>
 
-        <!-- ================= SCREEN 2: SIMULASI MUROJAAH ================= -->
         <section id="simulasi-screen" class="screen">
             <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8 max-w-4xl mx-auto relative border border-slate-200 overflow-hidden">
                 <button type="button" onclick="navigate('login')" class="absolute top-6 left-6 text-slate-400 hover:text-emerald-600 bg-white shadow-sm p-2 rounded-full transition-colors border border-slate-100" title="Kembali ke Beranda">
@@ -227,7 +222,6 @@
             </div>
         </section>
 
-        <!-- ================= SCREEN 3: ENTRY DATA ================= -->
         <section id="entry-screen" class="screen">
             <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8 max-w-4xl mx-auto relative border border-emerald-100 bg-pattern">
                 <button type="button" onclick="navigate('simulasi')" class="absolute top-6 left-6 text-slate-400 hover:text-emerald-600 bg-white shadow-sm p-2 rounded-full transition-colors border border-slate-100" title="Kembali ke Simulasi">
@@ -249,12 +243,11 @@
                 </div>
 
                 <div id="student-list-container" class="space-y-3 relative z-10 mt-6">
-                    <!-- Baris siswa -->
+                    <!-- Baris siswa (Dynamic) -->
                 </div>
             </div>
         </section>
 
-        <!-- ================= SCREEN 4: DASHBOARD ================= -->
         <section id="dashboard-screen" class="screen">
             <div class="bg-white rounded-3xl shadow-xl p-5 md:p-8 border border-slate-100">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 pb-6 border-b border-slate-100">
@@ -282,7 +275,6 @@
                         <button class="tab-btn flex-1 py-3 px-2 text-sm font-semibold text-slate-500 transition-colors" onclick="switchTab('individu', this)">Rekap Individu (Bulan)</button>
                     </div>
 
-                    <!-- TAB HARIAN -->
                     <div id="tab-harian" class="tab-content active">
                         <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                             <h3 class="font-bold text-slate-700 flex items-center gap-2">
@@ -332,7 +324,6 @@
                         </div>
                     </div>
 
-                    <!-- TAB MINGGUAN -->
                     <div id="tab-mingguan" class="tab-content">
                         <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                             <h3 class="font-bold text-slate-700 flex items-center gap-2">
@@ -368,7 +359,6 @@
                         </div>
                     </div>
 
-                    <!-- TAB INDIVIDU -->
                     <div id="tab-individu" class="tab-content">
                         <div class="flex justify-between items-start md:items-center mb-4 flex-col md:flex-row gap-4">
                             <h3 class="font-bold text-slate-700 flex items-center gap-2">
@@ -398,8 +388,8 @@
                                     <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
                                         <tr>
                                             <th class="p-3 font-bold w-1/3">Hari, Tanggal</th>
-                                            <th class="p-3 font-bold text-center w-1/3">Murojaah</th>
                                             <th class="p-3 font-bold text-center w-1/3">Ziyadah</th>
+                                            <th class="p-3 font-bold text-center w-1/3">Murojaah</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tbody-individu" class="divide-y divide-slate-100 bg-white">
@@ -434,8 +424,6 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // --- LAZY LOADER UNTUK LIBRARY BERAT (Chart.js & html2pdf) ---
-        // Library besar hanya diunduh browser saat benar-benar dipakai,
-        // bukan saat halaman pertama kali dibuka -> initial load jauh lebih ringan.
         const CDN_CHARTJS = "https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js";
         const CDN_HTML2PDF = "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js";
         const _scriptCache = {};
@@ -540,7 +528,7 @@
                 }
             }
 
-            // Prefetch Chart.js di waktu luang browser (tidak menghalangi hal lain)
+            // Prefetch Chart.js di waktu luang browser
             const prefetchChart = () => loadScriptOnce(CDN_CHARTJS).catch(() => {});
             if ('requestIdleCallback' in window) requestIdleCallback(prefetchChart, { timeout: 4000 });
             else setTimeout(prefetchChart, 2000);
@@ -587,7 +575,7 @@
             document.getElementById('display-kelas').textContent = currentUser.kelas;
             renderStudentList(currentUser.kelas);
             
-            // Navigate to simulasi first, as requested in previous instruction
+            // Navigate to simulasi first
             navigate('simulasi');
         });
 
@@ -979,8 +967,8 @@
                 tbodyHtml += `
                     <tr class="hover:bg-slate-50 transition-colors ${isSunday ? 'bg-red-50/50' : ''}">
                         <td class="p-3 border-b border-slate-100 font-medium text-slate-600 ${isSunday ? 'text-red-400' : ''}">${formatTgl}</td>
-                        <td class="p-3 border-b border-slate-100 text-center">${valM}</td>
                         <td class="p-3 border-b border-slate-100 text-center">${valZ}</td>
+                        <td class="p-3 border-b border-slate-100 text-center">${valM}</td>
                     </tr>`;
             }
             document.getElementById('tbody-individu').innerHTML = tbodyHtml;
@@ -1008,9 +996,6 @@
         }
 
         // --- SISTEM UNDUH PDF AESTHETIC (F4 Presisi 1 Lembar Tanpa Layar Bocor/Blank) ---
-
-        // Helper terpusat: memuat html2pdf (lazy) lalu merender templateHTML jadi PDF.
-        // Menghindari duplikasi kode di 3 fungsi unduh + memastikan library selalu siap.
         async function generatePdfFromTemplate(templateHTML, filename, loadingMessage) {
             const loader = document.getElementById('global-loader');
             if(loader) {
@@ -1018,35 +1003,53 @@
                 loader.classList.remove('hidden');
             }
 
-            let exportDiv;
             try {
                 await loadScriptOnce(CDN_HTML2PDF);
 
-                exportDiv = document.createElement('div');
-                exportDiv.style.position = 'absolute';
-                exportDiv.style.left = '-9999px';
-                exportDiv.style.top = '0';
-                exportDiv.style.width = '800px';
-                exportDiv.innerHTML = templateHTML;
-                document.body.appendChild(exportDiv);
-
                 const opt = {
-                    margin: 20,
+                    margin: 15, // 15mm = 1.5 cm presisi margin keliling
                     filename: filename,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
-                    jsPDF: { unit: 'mm', format: [210, 330], orientation: 'portrait' }
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true }, // Dihapus fixed windowWidth agar tidak shrink-to-fit
+                    jsPDF: { unit: 'mm', format: [210, 330], orientation: 'portrait' }, // Kertas dengan Lebar 210mm (F4/A4 width) => Area Konten Pas 180mm (18cm)
+                    pagebreak: { mode: ['css', 'legacy'] }
                 };
 
-                await html2pdf().set(opt).from(exportDiv).save();
+                // Mem-parsing langsung dari string HTML mencegah bug PDF blank/kosong
+                await html2pdf().set(opt).from(templateHTML).save();
                 showToast("Laporan PDF berhasil diunduh!", "success");
             } catch (err) {
+                console.error("PDF Generation Error:", err);
                 showToast("Gagal menyusun PDF.", "error");
             } finally {
                 if(loader) loader.classList.add('hidden');
-                if (exportDiv) document.body.removeChild(exportDiv);
             }
         }
+
+        const PDF_CSS_TEMPLATE = `
+            <style>
+                .pdf-container { font-family: 'Outfit', sans-serif; color: #1f2937; width: 18cm; margin: 0 auto; background-color: #ffffff; padding: 0; box-sizing: border-box; }
+                .pdf-title { text-align: center; border-bottom: 3px solid #047857; padding-bottom: 15px; margin-bottom: 20px; }
+                .pdf-title h2 { font-family: 'El Messiri', sans-serif; margin: 0; color: #064e3b; font-size: 20px; font-weight: 700; text-transform: uppercase; }
+                .pdf-title h3 { font-family: 'El Messiri', sans-serif; margin: 5px 0 0 0; color: #047857; font-size: 14px; }
+                
+                table { width: 18cm; table-layout: fixed; border-collapse: collapse; margin-bottom: 20px; margin-left: auto; margin-right: auto; }
+                th { background-color: #4b5563; color: white; text-align: center; font-family: 'El Messiri', sans-serif; padding: 8px; font-size: 13px; border: 1px solid #374151; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; vertical-align: middle; }
+                td { padding: 6px; border: 1px solid #9ca3af; font-size: 11px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; vertical-align: top; }
+                
+                /* Penguncian Presisi Lebar Kolom Harian & Mingguan */
+                .col-no { width: 1cm; text-align: center; } 
+                .col-nama { width: 6cm; text-align: left; } 
+                .col-z { width: 5.5cm; text-align: center; } 
+                .col-m { width: 5.5cm; text-align: center; } 
+                
+                /* Penguncian Presisi Lebar Kolom Bulanan Individu */
+                .col-hari { width: 7cm; text-align: left; }
+                
+                .avoid-break { page-break-inside: avoid !important; }
+                tr { page-break-inside: avoid !important; }
+            </style>
+        `;
 
         function unduhLaporanHarian() {
             const kelas = document.getElementById('filter-kelas').value;
@@ -1071,50 +1074,62 @@
 
                 tbodyHtml += `
                     <tr style="background: ${no % 2 === 0 ? '#f8fafc' : '#ffffff'};">
-                        <td style="padding: 4px; border: 1px solid #a7f3d0; text-align: center; color: #475569;">${no++}</td>
-                        <td style="padding: 4px; border: 1px solid #a7f3d0; font-weight: bold; color: #334155;">${siswa.nama}</td>
-                        <td style="padding: 4px; border: 1px solid #a7f3d0; text-align: center;">${htmlZ}</td>
-                        <td style="padding: 4px; border: 1px solid #a7f3d0; text-align: center;">${htmlM}</td>
+                        <td style="text-align: center; color: #475569;">${no++}</td>
+                        <td style="font-weight: bold; color: #334155;">${siswa.nama}</td>
+                        <td style="text-align: center;">${htmlZ}</td>
+                        <td style="text-align: center;">${htmlM}</td>
                     </tr>`;
             });
 
             const templateHTML = `
-                <div style="width: 800px; padding: 10px; font-family: 'Outfit', sans-serif; color: #1e293b; background: white; box-sizing: border-box; margin: 0 auto;">
-                    <div style="text-align: center; border-bottom: 2px solid #059669; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #064e3b; font-weight: 700; text-transform: uppercase;">Laporan Tahfiz Harian</h1>
-                        <p style="font-size: 14px; margin: 5px 0 0 0; color: #047857; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
+                <div class="pdf-container">
+                    ${PDF_CSS_TEMPLATE}
+                    <div class="pdf-title">
+                        <h2>Laporan Tahfiz Harian</h2>
+                        <h3>SD Muhammadiyah Sudagaran Wonosobo</h3>
                     </div>
                     
-                    <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
+                    <table style="width: 18cm; margin-bottom: 20px; border: none; font-size: 13px; font-weight: 600;">
                         <tr>
-                            <td style="vertical-align: top; width: 50%;">
-                                <table style="border-collapse: collapse;">
-                                    <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0;">Tanggal</td><td style="padding: 3px 0;">: ${formatTglLengkap(today)}</td></tr>
+                            <td style="vertical-align: top; width: 50%; border: none;">
+                                <table style="border: none; width: 100%; margin: 0;">
+                                    <tr><td style="padding: 3px 15px 3px 0; border: none;">Kelas</td><td style="padding: 3px 0; border: none;">: ${kelas}</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; border: none;">Tanggal</td><td style="padding: 3px 0; border: none;">: ${formatTglLengkap(today)}</td></tr>
                                 </table>
                             </td>
-                            <td style="vertical-align: top; width: 50%;">
-                                <table style="border-collapse: collapse; float: right;">
-                                    <tr><td style="padding: 3px 15px 3px 0;">Total Murid</td><td style="padding: 3px 0;">: ${cTot} Siswa</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #059669;">Ziyadah</td><td style="padding: 3px 0; color: #059669;">: ${cZ} Siswa</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #2563eb;">Murojaah</td><td style="padding: 3px 0; color: #2563eb;">: ${cM} Siswa</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #ef4444;">Belum Setor</td><td style="padding: 3px 0; color: #ef4444;">: ${cB} Siswa</td></tr>
+                            <td style="vertical-align: top; width: 50%; border: none;">
+                                <table style="border: none; width: 100%; margin: 0;">
+                                    <tr><td style="padding: 3px 15px 3px 0; border: none; text-align: right;">Total Murid :</td><td style="padding: 3px 0; border: none; text-align: left; width: 60px;">${cTot} Siswa</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #059669; border: none; text-align: right;">Ziyadah :</td><td style="padding: 3px 0; color: #059669; border: none; text-align: left;">${cZ} Siswa</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #2563eb; border: none; text-align: right;">Murojaah :</td><td style="padding: 3px 0; color: #2563eb; border: none; text-align: left;">${cM} Siswa</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #ef4444; border: none; text-align: right;">Belum Setor :</td><td style="padding: 3px 0; color: #ef4444; border: none; text-align: left;">${cB} Siswa</td></tr>
                                 </table>
                             </td>
                         </tr>
                     </table>
 
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif; text-align: center;">
-                        <thead style="background: #ecfdf5; color: #064e3b; font-family: 'El Messiri', serif;">
+                    <table>
+                        <thead>
                             <tr>
-                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 5%;">No</th>
-                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 35%; text-align: left;">Nama Murid</th>
-                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 30%;">Ziyadah</th>
-                                <th style="padding: 6px; border: 1px solid #6ee7b7; width: 30%;">Murojaah</th>
+                                <th class="col-no">No</th>
+                                <th class="col-nama">Nama Murid</th>
+                                <th class="col-z">Ziyadah</th>
+                                <th class="col-m">Murojaah</th>
                             </tr>
                         </thead>
                         <tbody>${tbodyHtml}</tbody>
                     </table>
+
+                    <div class="avoid-break" style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 30px; width: 18cm;">
+                        <div style="text-align: center; width: 6cm;">
+                            <p style="margin-bottom: 70px;">Mengetahui,<br/>Kepala Sekolah</p>
+                            <p style="border-bottom: 1px solid #1f2937; padding-bottom: 2px; font-weight: bold;">( ...................................... )</p>
+                        </div>
+                        <div style="text-align: center; width: 6cm;">
+                            <p style="margin-bottom: 70px;">Wonosobo, ${today.toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}<br/>Wali Kelas ${currentUser.kelas}</p>
+                            <p style="border-bottom: 1px solid #1f2937; padding-bottom: 2px; font-weight: bold;">( ${currentUser.ustazah || '......................................'} )</p>
+                        </div>
+                    </div>
                 </div>
             `;
 
@@ -1136,24 +1151,25 @@
             dataMingguanSiswa.forEach((s, i) => {
                 tbodyMingguanHtml += `
                     <tr style="background: ${i % 2 === 0 ? '#f8fafc' : '#ffffff'};">
-                        <td style="padding: 4px; border: 1px solid #bfdbfe; text-align: center; color: #475569;">${i + 1}</td>
-                        <td style="padding: 4px; border: 1px solid #bfdbfe; font-weight: bold; color: #334155; text-align: left;">${s.nama}</td>
-                        <td style="padding: 4px; border: 1px solid #bfdbfe; text-align: center;">${getWeeklyBadgeExport(s.zCount)}</td>
-                        <td style="padding: 4px; border: 1px solid #bfdbfe; text-align: center;">${getWeeklyBadgeExport(s.mCount)}</td>
+                        <td style="text-align: center; color: #475569;">${i + 1}</td>
+                        <td style="font-weight: bold; color: #334155; text-align: left;">${s.nama}</td>
+                        <td style="text-align: center;">${getWeeklyBadgeExport(s.zCount)}</td>
+                        <td style="text-align: center;">${getWeeklyBadgeExport(s.mCount)}</td>
                     </tr>`;
             });
 
             const templateHTML = `
-                <div style="width: 800px; padding: 10px; font-family: 'Outfit', sans-serif; color: #1e293b; background: white; box-sizing: border-box; margin: 0 auto;">
-                    <div style="text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #1e3a8a; font-weight: 700; text-transform: uppercase;">Rekap Mingguan Tahfiz</h1>
-                        <p style="font-size: 14px; margin: 5px 0 0 0; color: #2563eb; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
+                <div class="pdf-container">
+                    ${PDF_CSS_TEMPLATE}
+                    <div class="pdf-title">
+                        <h2>Rekap Mingguan Tahfiz</h2>
+                        <h3>SD Muhammadiyah Sudagaran Wonosobo</h3>
                     </div>
                     
-                    <table style="width: 100%; margin-bottom: 15px; font-size: 13px; font-weight: 600;">
+                    <table style="width: 18cm; margin-bottom: 15px; border: none; font-size: 13px; font-weight: 600;">
                         <tr>
-                            <td style="vertical-align: top; width: 50%;">Kelas: ${kelas}</td>
-                            <td style="vertical-align: top; width: 50%; text-align: right;">Periode: ${dAwal.toLocaleDateString('id-ID',{day:'2-digit',month:'short'})} - ${dAkhir.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</td>
+                            <td style="vertical-align: top; width: 50%; border: none;">Kelas: ${kelas}</td>
+                            <td style="vertical-align: top; width: 50%; border: none; text-align: right;">Periode: ${dAwal.toLocaleDateString('id-ID',{day:'2-digit',month:'short'})} - ${dAkhir.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</td>
                         </tr>
                     </table>
                     
@@ -1161,17 +1177,28 @@
                         <img src="${chartImgUrl}" style="max-width: 100%; height: auto; max-height: 150px; object-fit: contain;" alt="Chart Mingguan">
                     </div>
 
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif; text-align: center;">
-                        <thead style="background: #eff6ff; color: #1e3a8a; font-family: 'El Messiri', serif;">
+                    <table>
+                        <thead>
                             <tr>
-                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 5%;">No</th>
-                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 45%; text-align: left;">Nama Murid</th>
-                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 25%;">Ziyadah (Hari)</th>
-                                <th style="padding: 6px; border: 1px solid #93c5fd; width: 25%;">Murojaah (Hari)</th>
+                                <th class="col-no">No</th>
+                                <th class="col-nama">Nama Murid</th>
+                                <th class="col-z">Ziyadah (Hari)</th>
+                                <th class="col-m">Murojaah (Hari)</th>
                             </tr>
                         </thead>
                         <tbody>${tbodyMingguanHtml}</tbody>
                     </table>
+
+                    <div class="avoid-break" style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 30px; width: 18cm;">
+                        <div style="text-align: center; width: 6cm;">
+                            <p style="margin-bottom: 70px;">Mengetahui,<br/>Kepala Sekolah</p>
+                            <p style="border-bottom: 1px solid #1f2937; padding-bottom: 2px; font-weight: bold;">( ...................................... )</p>
+                        </div>
+                        <div style="text-align: center; width: 6cm;">
+                            <p style="margin-bottom: 70px;">Wonosobo, ${new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}<br/>Wali Kelas ${currentUser.kelas}</p>
+                            <p style="border-bottom: 1px solid #1f2937; padding-bottom: 2px; font-weight: bold;">( ${currentUser.ustazah || '......................................'} )</p>
+                        </div>
+                    </div>
                 </div>
             `;
 
@@ -1215,61 +1242,60 @@
                 
                 tbodyHtml += `
                     <tr style="background: ${isSunday ? '#fef2f2' : (day % 2 === 0 ? '#f8fafc' : '#ffffff')};">
-                        <td style="padding: 4px 6px; border: 1px solid #cbd5e1; color: ${isSunday ? '#f87171' : '#475569'}; text-align: left;">${formatTgl}</td>
-                        <td style="padding: 4px 6px; border: 1px solid #cbd5e1; text-align: center;">${valM}</td>
-                        <td style="padding: 4px 6px; border: 1px solid #cbd5e1; text-align: center;">${valZ}</td>
+                        <td style="color: ${isSunday ? '#f87171' : '#475569'}; text-align: left;">${formatTgl}</td>
+                        <td style="text-align: center;">${valZ}</td>
+                        <td style="text-align: center;">${valM}</td>
                     </tr>
                 `;
             }
 
             const templateHTML = `
-                <div style="width: 800px; padding: 10px; font-family: 'Outfit', sans-serif; color: #1e293b; background: white; box-sizing: border-box; margin: 0 auto;">
-                    <div style="text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h1 style="font-family: 'El Messiri', serif; font-size: 28px; line-height: 1.2; margin: 0; color: #0f766e; font-weight: 700; text-transform: uppercase;">Rapor Tahfiz Individu</h1>
-                        <p style="font-size: 14px; margin: 5px 0 0 0; color: #0d9488; font-family: 'Outfit', sans-serif;">SD Muhammadiyah Sudagaran Wonosobo</p>
+                <div class="pdf-container">
+                    ${PDF_CSS_TEMPLATE}
+                    <div class="pdf-title">
+                        <h2>Rapor Tahfiz Individu</h2>
+                        <h3>SD Muhammadiyah Sudagaran Wonosobo</h3>
                     </div>
                     
-                    <table style="width: 100%; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
+                    <table style="width: 18cm; margin-bottom: 20px; border: none; font-size: 13px; font-weight: 600;">
                         <tr>
-                            <td style="vertical-align: top; width: 60%;">
-                                <table style="border-collapse: collapse;">
-                                    <tr><td style="padding: 3px 15px 3px 0;">Siswa</td><td style="padding: 3px 0;">: ${namaSiswa.toUpperCase()}</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0;">Kelas</td><td style="padding: 3px 0;">: ${kelas}</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0;">Periode</td><td style="padding: 3px 0;">: Bulan ${monthName}</td></tr>
+                            <td style="vertical-align: top; width: 60%; border: none;">
+                                <table style="border-collapse: collapse; border: none; margin: 0;">
+                                    <tr><td style="padding: 3px 15px 3px 0; border: none;">Siswa</td><td style="padding: 3px 0; border: none;">: ${namaSiswa.toUpperCase()}</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; border: none;">Kelas</td><td style="padding: 3px 0; border: none;">: ${kelas}</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; border: none;">Periode</td><td style="padding: 3px 0; border: none;">: Bulan ${monthName}</td></tr>
                                 </table>
                             </td>
-                            <td style="vertical-align: top; width: 40%;">
-                                <table style="border-collapse: collapse; float: right;">
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #047857;">Total Ziyadah</td><td style="padding: 3px 0; color: #047857;">: ${totalZiyadah} Hari</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0; color: #1d4ed8;">Total Murojaah</td><td style="padding: 3px 0; color: #1d4ed8;">: ${totalMurojaah} Hari</td></tr>
+                            <td style="vertical-align: top; width: 40%; border: none;">
+                                <table style="border-collapse: collapse; float: right; border: none; margin: 0;">
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #047857; border: none; text-align: right;">Total Ziyadah</td><td style="padding: 3px 0; color: #047857; border: none;">: ${totalZiyadah} Hari</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; color: #1d4ed8; border: none; text-align: right;">Total Murojaah</td><td style="padding: 3px 0; color: #1d4ed8; border: none;">: ${totalMurojaah} Hari</td></tr>
                                 </table>
                             </td>
                         </tr>
                     </table>
 
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Outfit', sans-serif; text-align: center;">
-                        <thead style="background: #f0fdfa; color: #0f766e; font-family: 'El Messiri', serif;">
+                    <table>
+                        <thead>
                             <tr>
-                                <th style="padding: 6px; border: 1px solid #5eead4; text-align: left; width: 40%;">Hari, Tanggal</th>
-                                <th style="padding: 6px; border: 1px solid #5eead4; text-align: center; width: 30%;">Murojaah</th>
-                                <th style="padding: 6px; border: 1px solid #5eead4; text-align: center; width: 30%;">Ziyadah</th>
+                                <th class="col-hari">Hari, Tanggal</th>
+                                <th class="col-z">Ziyadah</th>
+                                <th class="col-m">Murojaah</th>
                             </tr>
                         </thead>
                         <tbody>${tbodyHtml}</tbody>
                     </table>
                     
-                    <table style="width: 100%; margin-top: 30px; font-size: 13px; text-align: center; page-break-inside: avoid;">
-                        <tr>
-                            <td style="width: 50%; vertical-align: bottom;">
-                                <p style="margin: 0 0 50px 0;">Mengetahui,<br>Orang Tua / Wali</p>
-                                <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px;"></p>
-                            </td>
-                            <td style="width: 50%; vertical-align: bottom;">
-                                <p style="margin: 0 0 50px 0;">Wonosobo, ........................<br>Ustaz/ah Pengampu</p>
-                                <p style="margin: 0; display: inline-block; border-bottom: 1px solid #334155; width: 200px;"></p>
-                            </td>
-                        </tr>
-                    </table>
+                    <div class="avoid-break" style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 30px; width: 18cm;">
+                        <div style="text-align: center; width: 6cm;">
+                            <p style="margin-bottom: 70px;">Mengetahui,<br/>Orang Tua / Wali Murid</p>
+                            <p style="border-bottom: 1px solid #1f2937; padding-bottom: 2px; font-weight: bold;">( ...................................... )</p>
+                        </div>
+                        <div style="text-align: center; width: 6cm;">
+                            <p style="margin-bottom: 70px;">Wonosobo, ........................<br/>Ustaz/ah Pengampu</p>
+                            <p style="border-bottom: 1px solid #1f2937; padding-bottom: 2px; font-weight: bold;">( ${currentUser.ustazah || '......................................'} )</p>
+                        </div>
+                    </div>
                 </div>
             `;
 
