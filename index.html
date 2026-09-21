@@ -482,7 +482,10 @@
             const ustazahSelect = document.getElementById('ustazah');
 
             document.getElementById('filter-bulan-individu').value = new Date().toISOString().slice(0, 7);
-            document.getElementById('filter-tgl-harian').value = getYYYYMMDD(new Date());
+            
+            const tglInputEl = document.getElementById('filter-tgl-harian');
+            if(tglInputEl) tglInputEl.value = getYYYYMMDD(new Date());
+            
             ustazahData.forEach(u => ustazahSelect.add(new Option(u, u)));
 
             // 1) Coba tampilkan instan dari cache lokal (stale-while-revalidate)
@@ -503,22 +506,24 @@
                 }
             } catch (e) { /* cache tidak valid, abaikan */ }
 
-            // 2) Tarik data terbaru siswa dari Supabase (Dengan Fallback jika data_siswa kosong)
+            // 2) Tarik data terbaru siswa dari Supabase
             try {
                 let { data, error } = await supabaseClient
                     .from('data_siswa')
-                    .select('kelas, nama');
+                    .select('kelas, nama')
+                    .limit(10000); // FIX: Membuka gembok limit default 1000 baris Supabase
                 
-                // SISTEM FALLBACK: Jika data_siswa kosong, cari nama siswa dari riwayat_setoran yang sudah ada
+                // SISTEM FALLBACK DIKEMBALIKAN: Jika data_siswa kosong, memuat nama dari riwayat yang sudah masuk
                 if (error || !data || data.length === 0) {
                     console.warn("Tabel data_siswa kosong, mencoba memuat dari riwayat_setoran...");
                     const { data: fallbackData, error: fallbackError } = await supabaseClient
                         .from('riwayat_setoran')
-                        .select('kelas, nama');
+                        .select('kelas, nama')
+                        .limit(20000); // Angka besar untuk mengambil seluruh rekap murid se-sekolah
                         
                     if (fallbackError) throw fallbackError;
                     
-                    // Filter unik agar nama tidak dobel
+                    // Saring nama agar tidak ganda
                     const uniqueStudents = [];
                     const map = new Map();
                     for (const item of fallbackData || []) {
@@ -846,7 +851,7 @@
                     .select('*')
                     .eq('kelas', kelas)
                     .gte('tanggal', isoWindow)
-                    .limit(5000); // Limit besar memastikan data masuk semua
+                    .limit(10000); // FIX MUTLAK: Mencegah data terpotong saat kelas menyentuh >1000 setoran
                 
                 if (error) throw error;
                 
