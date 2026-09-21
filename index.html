@@ -503,22 +503,36 @@
                 }
             } catch (e) { /* cache tidak valid, abaikan */ }
 
-            // 2) Tarik data terbaru siswa dari Supabase
+            // 2) Tarik data terbaru siswa dari Supabase (Dengan Fallback jika data_siswa kosong)
             try {
-                // Tarik data dasbor menggunakan filter database (Supabase)
-                const windowDate = new Date();
-                windowDate.setDate(windowDate.getDate() - 180); // Ditingkatkan ke 180 hari (6 bulan) agar riwayat data lama tetap bisa direkap
-                const isoWindow = windowDate.toISOString();
-
-                const { data, error } = await supabaseClient
-                    .from('riwayat_setoran')
-                    .select('*')
-                    .eq('kelas', kelas)
-                    .gte('tanggal', isoWindow)
-                    .limit(5000);
+                let { data, error } = await supabaseClient
+                    .from('data_siswa')
+                    .select('kelas, nama');
                 
-                if (error) throw error;
-                if (!data || data.length === 0) throw new Error("Data siswa kosong di database.");
+                // SISTEM FALLBACK: Jika data_siswa kosong, cari nama siswa dari riwayat_setoran yang sudah ada
+                if (error || !data || data.length === 0) {
+                    console.warn("Tabel data_siswa kosong, mencoba memuat dari riwayat_setoran...");
+                    const { data: fallbackData, error: fallbackError } = await supabaseClient
+                        .from('riwayat_setoran')
+                        .select('kelas, nama');
+                        
+                    if (fallbackError) throw fallbackError;
+                    
+                    // Filter unik agar nama tidak dobel
+                    const uniqueStudents = [];
+                    const map = new Map();
+                    for (const item of fallbackData || []) {
+                        if (item.nama && item.kelas) {
+                            const key = item.kelas.trim() + '_' + item.nama.trim();
+                            if (!map.has(key)) {
+                                map.set(key, true);
+                                uniqueStudents.push({kelas: item.kelas.trim(), nama: item.nama.trim()});
+                            }
+                        }
+                    }
+                    if (uniqueStudents.length === 0) throw new Error("Data siswa kosong di database.");
+                    data = uniqueStudents;
+                }
 
                 allSiswa = data;
                 populateKelasDropdowns(allSiswa);
@@ -822,15 +836,17 @@
             }
 
             try {
+                // Tarik data dasbor menggunakan filter database (Supabase) - Diperluas 180 hari
                 const windowDate = new Date();
-                windowDate.setDate(windowDate.getDate() - 45); // Hanya ambil 45 hari terakhir
+                windowDate.setDate(windowDate.getDate() - 180); // Diperluas 6 Bulan agar data tidak hilang
                 const isoWindow = windowDate.toISOString();
 
                 const { data, error } = await supabaseClient
                     .from('riwayat_setoran')
                     .select('*')
                     .eq('kelas', kelas)
-                    .gte('tanggal', isoWindow);
+                    .gte('tanggal', isoWindow)
+                    .limit(5000); // Limit besar memastikan data masuk semua
                 
                 if (error) throw error;
                 
@@ -883,7 +899,7 @@
             } else if (tglInputEl) {
                 tglInputEl.value = getYYYYMMDD(selectedDateHarian);
             }
-            
+
             const siswaKelas = allSiswa.filter(s => String(s.kelas).trim() === String(kelas).trim());
             
             // 1. DATA HARIAN
