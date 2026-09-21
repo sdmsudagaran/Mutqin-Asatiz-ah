@@ -279,7 +279,7 @@
                         <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                             <h3 class="font-bold text-slate-700 flex items-center gap-2">
                                 <span class="bg-emerald-100 p-1.5 rounded-lg text-emerald-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" /></svg></span>
-                                Hari Ini <span id="label-tgl-harian" class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded-md ml-2 font-normal border border-slate-200">...</span>
+                                Rekap Tanggal: <input type="date" id="filter-tgl-harian" onchange="processDashboardData(document.getElementById('filter-kelas').value)" class="text-sm bg-white text-emerald-700 px-2 py-1 rounded-md ml-1 font-bold border border-emerald-200 outline-none focus:border-emerald-500 shadow-sm cursor-pointer transition-colors">
                             </h3>
                             <button onclick="unduhLaporanHarian()" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold px-4 py-2.5 rounded-lg hover:from-emerald-700 hover:to-teal-700 flex items-center gap-2 shadow-md transition-transform transform active:scale-95">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -482,6 +482,7 @@
             const ustazahSelect = document.getElementById('ustazah');
 
             document.getElementById('filter-bulan-individu').value = new Date().toISOString().slice(0, 7);
+            document.getElementById('filter-tgl-harian').value = getYYYYMMDD(new Date());
             ustazahData.forEach(u => ustazahSelect.add(new Option(u, u)));
 
             // 1) Coba tampilkan instan dari cache lokal (stale-while-revalidate)
@@ -504,9 +505,17 @@
 
             // 2) Tarik data terbaru siswa dari Supabase
             try {
+                // Tarik data dasbor menggunakan filter database (Supabase)
+                const windowDate = new Date();
+                windowDate.setDate(windowDate.getDate() - 180); // Ditingkatkan ke 180 hari (6 bulan) agar riwayat data lama tetap bisa direkap
+                const isoWindow = windowDate.toISOString();
+
                 const { data, error } = await supabaseClient
-                    .from('data_siswa')
-                    .select('kelas, nama');
+                    .from('riwayat_setoran')
+                    .select('*')
+                    .eq('kelas', kelas)
+                    .gte('tanggal', isoWindow)
+                    .limit(5000);
                 
                 if (error) throw error;
                 if (!data || data.length === 0) throw new Error("Data siswa kosong di database.");
@@ -866,16 +875,22 @@
         }
 
         function processDashboardData(kelas) {
-            const today = new Date();
-            const tglHarianEl = document.getElementById('label-tgl-harian');
-            if(tglHarianEl) tglHarianEl.textContent = formatTglLengkap(today);
+            const tglInputEl = document.getElementById('filter-tgl-harian');
+            let selectedDateHarian = new Date();
+            if (tglInputEl && tglInputEl.value) {
+                const [y, m, d] = tglInputEl.value.split('-');
+                selectedDateHarian = new Date(y, m - 1, d);
+            } else if (tglInputEl) {
+                tglInputEl.value = getYYYYMMDD(selectedDateHarian);
+            }
+            
             const siswaKelas = allSiswa.filter(s => String(s.kelas).trim() === String(kelas).trim());
             
             // 1. DATA HARIAN
             let cTotal = siswaKelas.length, cZiyadah = 0, cMurojaah = 0, cBelum = 0;
             let tbodyHarian = '';
             siswaKelas.forEach((siswa, index) => {
-                const recordKey = `${String(siswa.nama).trim()}_${String(siswa.kelas).trim()}_${getYYYYMMDD(today)}`;
+                const recordKey = `${String(siswa.nama).trim()}_${String(siswa.kelas).trim()}_${getYYYYMMDD(selectedDateHarian)}`;
                 const record = window.recordsMap ? window.recordsMap[recordKey] : null;
                 let valZ = '-', valM = '-'; let hasZ = false, hasM = false;
 
@@ -1053,12 +1068,18 @@
             const kelas = document.getElementById('filter-kelas').value;
             if(!kelas) return showToast("Pilih kelas dulu!", "error");
 
-            const today = new Date();
+            const tglInputEl = document.getElementById('filter-tgl-harian');
+            let selectedDateHarian = new Date();
+            if (tglInputEl && tglInputEl.value) {
+                const [y, m, d] = tglInputEl.value.split('-');
+                selectedDateHarian = new Date(y, m - 1, d);
+            }
+
             const filteredSiswa = allSiswa.filter(s => String(s.kelas).trim() === String(kelas).trim());
             let cTot = filteredSiswa.length, cZ = 0, cM = 0, cB = 0, tbodyHtml = '', no = 1;
 
             filteredSiswa.forEach(siswa => {
-                const recordKey = `${String(siswa.nama).trim()}_${String(siswa.kelas).trim()}_${getYYYYMMDD(today)}`;
+                const recordKey = `${String(siswa.nama).trim()}_${String(siswa.kelas).trim()}_${getYYYYMMDD(selectedDateHarian)}`;
                 const record = window.recordsMap ? window.recordsMap[recordKey] : null;
                 const safeZ = (record && record.ziyadah) ? String(record.ziyadah).trim() : "";
                 const safeM = (record && record.murojaah) ? String(record.murojaah).trim() : "";
@@ -1092,7 +1113,7 @@
                             <td style="vertical-align: top; width: 50%; border: none;">
                                 <table style="border: none; width: 100%; margin: 0;">
                                     <tr><td style="padding: 3px 15px 3px 0; border: none;">Kelas</td><td style="padding: 3px 0; border: none;">: ${kelas}</td></tr>
-                                    <tr><td style="padding: 3px 15px 3px 0; border: none;">Tanggal</td><td style="padding: 3px 0; border: none;">: ${formatTglLengkap(today)}</td></tr>
+                                    <tr><td style="padding: 3px 15px 3px 0; border: none;">Tanggal</td><td style="padding: 3px 0; border: none;">: ${formatTglLengkap(selectedDateHarian)}</td></tr>
                                 </table>
                             </td>
                             <td style="vertical-align: top; width: 50%; border: none;">
@@ -1118,14 +1139,14 @@
                         <tbody>${tbodyHtml}</tbody>
                     </table>
 
-                    <div class="avoid-break" style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 30px; width: 18cm;">
-                        <div style="text-align: center; width: 6cm;">
+                    <div class="avoid-break" style="display: flex; justify-content: space-between; font-size: 14px; margin-top: 30px; width: 100%;">
+                        <div style="text-align: center; width: 45%;">
                             <p style="margin-bottom: 70px;">Mengetahui,<br/>Kepala Sekolah</p>
-                            <p style="border-bottom: 1px solid #1f2937; padding-bottom: 2px; font-weight: bold;">( ...................................... )</p>
+                            <p style="border-bottom: 1px solid #000000; padding-bottom: 2px; font-weight: bold;">( ...................................... )</p>
                         </div>
-                        <div style="text-align: center; width: 6cm;">
-                            <p style="margin-bottom: 70px;">Wonosobo, ${today.toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}<br/>Wali Kelas ${currentUser.kelas}</p>
-                            <p style="border-bottom: 1px solid #1f2937; padding-bottom: 2px; font-weight: bold;">( ${currentUser.ustazah || '......................................'} )</p>
+                        <div style="text-align: center; width: 45%;">
+                            <p style="margin-bottom: 70px;">Wonosobo, ${selectedDateHarian.toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}<br/>Wali Kelas ${currentUser.kelas}</p>
+                            <p style="border-bottom: 1px solid #000000; padding-bottom: 2px; font-weight: bold;">( ${currentUser.ustazah || '......................................'} )</p>
                         </div>
                     </div>
                 </div>
@@ -1133,7 +1154,7 @@
 
             generatePdfFromTemplate(
                 templateHTML,
-                `Harian_${kelas.replace(/\s+/g,'_')}_${getYYYYMMDD(today)}.pdf`,
+                `Harian_${kelas.replace(/\s+/g,'_')}_${getYYYYMMDD(selectedDateHarian)}.pdf`,
                 "Menyusun PDF Harian (F4)..."
             );
         }
