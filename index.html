@@ -841,9 +841,8 @@
             }
 
             try {
-                // Tarik data dasbor menggunakan filter database (Supabase) - Diperluas 180 hari
                 const windowDate = new Date();
-                windowDate.setDate(windowDate.getDate() - 180); // Diperluas 6 Bulan agar data tidak hilang
+                windowDate.setDate(windowDate.getDate() - 45); // Hanya ambil 45 hari terakhir
                 const isoWindow = windowDate.toISOString();
 
                 const { data, error } = await supabaseClient
@@ -851,11 +850,13 @@
                     .select('*')
                     .eq('kelas', kelas)
                     .gte('tanggal', isoWindow)
-                    .limit(10000); // FIX MUTLAK: Mencegah data terpotong saat kelas menyentuh >1000 setoran
+                    .order('tanggal', { ascending: false }) // MENGAMBIL DATA TERBARU DULUAN
+                    .limit(10000); // MEMAKSA LEWAT DARI BATAS 1000 SERVER
                 
                 if (error) throw error;
                 
-                let records = data || [];
+                // Balik urutan agar sistem Smart Merge menimpa data lama dengan data baru dengan benar
+                let records = data ? data.reverse() : [];
                 allRecords = records;
                 window.recordsMap = {};
                 
